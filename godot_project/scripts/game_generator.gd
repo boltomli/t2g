@@ -33,6 +33,9 @@ func generate_game(text: String, analysis: Dictionary, game_type: String, game_c
 	generation_progress.emit("生成主场景", 0.2)
 	_create_main_scene(project_path, game_config, game_type)
 	
+	generation_progress.emit("生成主脚本", 0.25)
+	_create_main_script(project_path, game_config, game_type)
+	
 	generation_progress.emit("生成角色系统", 0.3)
 	_create_character_system(project_path, game_config)
 	
@@ -40,9 +43,15 @@ func generate_game(text: String, analysis: Dictionary, game_type: String, game_c
 	_create_dialogue_system(project_path, game_config)
 	
 	generation_progress.emit("生成游戏场景", 0.5)
+	_create_game_scene(project_path, game_config, game_type)
+	
+	generation_progress.emit("生成游戏场景脚本", 0.55)
+	_create_game_scene_script(project_path, game_config, game_type)
+	
+	generation_progress.emit("生成额外场景", 0.6)
 	_create_game_scenes(project_path, game_config, game_type)
 	
-	generation_progress.emit("生成UI系统", 0.6)
+	generation_progress.emit("生成UI系统", 0.65)
 	_create_ui_system(project_path, game_config)
 	
 	generation_progress.emit("生成游戏逻辑", 0.7)
@@ -156,6 +165,163 @@ text = "开始游戏"
 """ % config.get("game_info", {}).get("title", "Game")
 	
 	_save_file(project_path + "/scenes/main.tscn", scene_content)
+
+## 创建游戏场景
+func _create_game_scene(project_path: String, config: Dictionary, game_type: String) -> void:
+	var scene_content = """[gd_scene load_steps=2 format=3 uid="uid://game_scene"]
+
+[ext_resource type="Script" path="res://scripts/game_scene.gd" id="1_script"]
+
+[node name="Game" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.12, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+
+[node name="SpeakerLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = ""
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.9, 0.9, 1.0, 1)
+
+[node name="DialogueBox" type="PanelContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBox" type="VBoxContainer" parent="VBoxContainer/DialogueBox"]
+layout_mode = 2
+
+[node name="TextLabel" type="RichTextLabel" parent="VBoxContainer/DialogueBox/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = ""
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ContinueButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "继续"
+custom_minimum_size = Vector2(200, 40)
+"""
+	_save_file(project_path + "/scenes/game.tscn", scene_content)
+
+## 创建游戏场景脚本
+func _create_game_scene_script(project_path: String, config: Dictionary, game_type: String) -> void:
+	var game_info = config.get("game_info", {})
+	var script_content = """## 游戏场景控制器
+extends Control
+
+## 组件引用
+@onready var speaker_label = $VBoxContainer/SpeakerLabel
+@onready var text_label = $VBoxContainer/DialogueBox/VBox/TextLabel
+@onready var choices_container = $VBoxContainer/ChoicesContainer
+@onready var continue_button = $VBoxContainer/ContinueButton
+
+## 系统引用
+var dialogue_system: Node
+var character_system: Node
+var game_logic: Node
+
+## 当前对话数据
+var current_dialogues: Array = []
+var current_index: int = 0
+
+func _ready() -> void:
+	# 获取系统引用
+	dialogue_system = _find_system("DialogueSystem")
+	character_system = _find_system("CharacterSystem")
+	game_logic = _find_system("GameLogic")
+	
+	# 连接信号
+	continue_button.pressed.connect(_on_continue_pressed)
+	
+	if dialogue_system:
+		dialogue_system.dialogue_started.connect(_on_dialogue_started)
+		dialogue_system.dialogue_ended.connect(_on_dialogue_ended)
+	
+	# 开始游戏
+	_start_game()
+
+func _find_system(system_name: String) -> Node:
+	for child in get_parent().get_children():
+		if child.get_script() and child.get_script().get_global_name() == system_name:
+			return child
+	for child in get_children():
+		if child.get_script() and child.get_script().get_global_name() == system_name:
+			return child
+	return null
+
+func _start_game() -> void:
+	_load_dialogues()
+	
+	speaker_label.text = "旁白"
+	text_label.text = "欢迎来到游戏世界！\n\n点击[继续]开始冒险..."
+	continue_button.visible = true
+
+func _load_dialogues() -> void:
+	var file = FileAccess.open("user://data/game_config.json", FileAccess.READ)
+	if file:
+		var json = JSON.new()
+		var result = json.parse(file.get_as_text())
+		if result == OK:
+			var config_data = json.data
+			current_dialogues = config_data.get("dialogues", {}).get("main", [])
+		file.close()
+	
+	if current_dialogues.is_empty():
+		current_dialogues = [
+			{"speaker": "旁白", "text": "在这片古老的土地上，新的故事即将展开..."},
+			{"speaker": "旁白", "text": "你将扮演一个重要的角色，决定这个世界的命运。"},
+			{"speaker": "旁白", "text": "准备好开始你的冒险了吗？"}
+		]
+
+func _on_continue_pressed() -> void:
+	if current_index < current_dialogues.size():
+		var line = current_dialogues[current_index]
+		speaker_label.text = line.get("speaker", "")
+		text_label.text = line.get("text", "")
+		current_index += 1
+		
+		if current_index >= current_dialogues.size():
+			continue_button.text = "结束"
+			continue_button.pressed.disconnect(_on_continue_pressed)
+			continue_button.pressed.connect(_on_game_over)
+	else:
+		_on_game_over()
+
+func _on_dialogue_started(speaker: String, text: String) -> void:
+	speaker_label.text = speaker
+	text_label.text = text
+
+func _on_dialogue_ended() -> void:
+	text_label.text = "对话结束"
+
+func _on_game_over() -> void:
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
+"""
+	_save_file(project_path + "/scripts/game_scene.gd", script_content)
 
 ## 创建角色系统
 func _create_character_system(project_path: String, config: Dictionary) -> void:
@@ -450,6 +616,56 @@ func _save_game_data(project_path: String, text: String, analysis: Dictionary, c
 	
 	# 保存游戏配置
 	_save_file(project_path + "/data/game_config.json", JSON.stringify(config, "\t"))
+
+## 创建主脚本
+func _create_main_script(project_path: String, config: Dictionary, game_type: String) -> void:
+	var game_info = config.get("game_info", {})
+	var script_content = """## 主场景控制器
+extends Control
+
+## 系统引用
+var game_logic: Node
+var dialogue_system: Node
+var character_system: Node
+
+## 组件引用
+@onready var title_label = $VBoxContainer/Title
+@onready var content_label = $VBoxContainer/Content
+@onready var start_button = $VBoxContainer/ButtonContainer/StartButton
+
+func _ready() -> void:
+	# 初始化系统
+	character_system = preload("res://scripts/character_system.gd").new()
+	add_child(character_system)
+	
+	dialogue_system = preload("res://scripts/dialogue_system.gd").new()
+	add_child(dialogue_system)
+	
+	game_logic = preload("res://scripts/game_logic.gd").new()
+	add_child(game_logic)
+	
+	# 连接信号
+	dialogue_system.dialogue_started.connect(_on_dialogue_started)
+	dialogue_system.dialogue_ended.connect(_on_dialogue_ended)
+	
+	# 初始化UI
+	title_label.text = game_info.get("title", "游戏")
+	content_label.text = game_info.get("description", "欢迎来到游戏世界！")
+	
+	# 连接按钮
+	start_button.pressed.connect(_on_start_button_pressed)
+
+func _on_start_button_pressed() -> void:
+	# 开始游戏
+	game_logic.change_scene("game")
+
+func _on_dialogue_started(speaker: String, text: String) -> void:
+	content_label.text = "[b]%s[/b]\n%s" % [speaker, text]
+
+func _on_dialogue_ended() -> void:
+	content_label.text = "游戏结束"
+"""
+	_save_file(project_path + "/scripts/main.gd", script_content)
 
 ## 保存文件辅助函数
 func _save_file(path: String, content: String) -> void:
