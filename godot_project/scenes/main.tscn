@@ -1,0 +1,220 @@
+[gd_scene load_steps=3 format=3 uid="uid://main_scene"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/config_loader.gd" id="2_config"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.12, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "Text2Game - 文本转游戏"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 32
+
+[node name="Subtitle" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "输入文本，生成你的专属游戏"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="InputLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "请输入或粘贴文本内容:"
+
+[node name="TextInput" type="TextEdit" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 180.0
+offset_right = -40.0
+offset_bottom = -120.0
+placeholder_text = "在此输入文本...或者点击下方按钮加载示例文本"
+text = ""
+
+[node name="Buttons" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="AnalyzeButton" type="Button" parent="VBoxContainer/Buttons"]
+layout_mode = 2
+text = "分析文本"
+custom_minimum_size = Vector2(150, 40)
+
+[node name="ExampleButton" type="Button" parent="VBoxContainer/Buttons"]
+layout_mode = 2
+text = "加载示例"
+custom_minimum_size = Vector2(150, 40)
+
+[node name="ClearButton" type="Button" parent="VBoxContainer/Buttons"]
+layout_mode = 2
+text = "清空"
+custom_minimum_size = Vector2(100, 40)
+
+[node name="AboutButton" type="Button" parent="VBoxContainer/Buttons"]
+layout_mode = 2
+text = "关于"
+custom_minimum_size = Vector2(100, 40)
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="AnalysisPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+
+[node name="VBox" type="VBoxContainer" parent="AnalysisPanel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="AnalysisPanel/VBox"]
+layout_mode = 2
+text = "文本分析结果"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+
+[node name="HSeparator" type="HSeparator" parent="AnalysisPanel/VBox"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="AnalysisPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ContentVBox" type="VBoxContainer" parent="AnalysisPanel/VBox/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WorldLabel" type="RichTextLabel" parent="AnalysisPanel/VBox/ScrollContainer/ContentVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "【世界观】"
+bbcode_enabled = true
+
+[node name="HSeparator2" type="HSeparator" parent="AnalysisPanel/VBox/ScrollContainer/ContentVBox"]
+layout_mode = 2
+
+[node name="CharactersLabel" type="RichTextLabel" parent="AnalysisPanel/VBox/ScrollContainer/ContentVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "【角色】"
+bbcode_enabled = true
+
+[node name="HSeparator3" type="HSeparator" parent="AnalysisPanel/VBox/ScrollContainer/ContentVBox"]
+layout_mode = 2
+
+[node name="ThemesLabel" type="RichTextLabel" parent="AnalysisPanel/VBox/ScrollContainer/ContentVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "【主题】"
+bbcode_enabled = true
+
+[node name="BackButton" type="Button" parent="AnalysisPanel"]
+layout_mode = 2
+text = "返回"
+
+[node name="GameTypePanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+
+[node name="VBox" type="VBoxContainer" parent="GameTypePanel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="GameTypePanel/VBox"]
+layout_mode = 2
+text = "选择游戏类型"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+
+[node name="Subtitle" type="Label" parent="GameTypePanel/VBox"]
+layout_mode = 2
+text = "基于文本分析，推荐以下游戏类型："
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="GameTypePanel/VBox"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="GameTypePanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="GameTypes" type="HBoxContainer" parent="GameTypePanel/VBox/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="BackButton" type="Button" parent="GameTypePanel"]
+layout_mode = 2
+text = "返回"
+
+[node name="LoadingPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="LoadingPanel"]
+layout_mode = 2
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -50.0
+offset_right = 150.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LoadingLabel" type="Label" parent="LoadingPanel/VBox"]
+layout_mode = 2
+text = "加载中..."
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="LoadingPanel/VBox"]
+layout_mode = 2
+value = 0.0

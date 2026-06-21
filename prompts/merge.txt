@@ -1,0 +1,32 @@
+合并以下分析结果为一个完整的JSON。
+
+输出格式（严格JSON）：
+```json
+{
+  "world": {
+    "name": "世界名称",
+    "era": "时代",
+    "location": "地点",
+    "rules": "规则",
+    "description": "描述"
+  },
+  "characters": [
+    {"name": "姓名", "role": "角色", "traits": ["特征"], "background": "背景", "goal": "目标"}
+  ],
+  "conflicts": [
+    {"type": "类型", "description": "描述"}
+  ],
+  "themes": ["主题"],
+  "atmosphere": "氛围"
+}
+```
+
+合并规则：
+1. 只输出JSON，不要其他文字
+2. 合并所有world信息，取最详细的描述
+3. 合并所有characters，去除重复角色
+4. 合并所有conflicts
+5. 合并所有themes，去除重复
+6. 保留atmosphere信息
+
+待合并的分析结果：

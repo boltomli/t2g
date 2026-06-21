@@ -1,0 +1,19 @@
+[project]
+name = "text2game"
+version = "0.1.0"
+description = "将文本转换为可玩游戏的元系统"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+dependencies = [
+    "requests>=2.28.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.65.0",
+    "loguru>=0.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+]
