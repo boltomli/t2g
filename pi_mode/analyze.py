@@ -104,11 +104,14 @@ class LLMClient:
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         
+        # 跳过局域网代理
+        proxies = {"http": None, "https": None}
+        
         last_error = None
         for attempt in range(self.max_retries):
             try:
                 print(f"  发送请求... (尝试 {attempt + 1}/{self.max_retries})")
-                response = requests.post(url, json=body, headers=headers, timeout=self.timeout)
+                response = requests.post(url, json=body, headers=headers, timeout=self.timeout, proxies=proxies)
                 
                 if response.status_code == 200:
                     return response.json()
@@ -143,8 +146,9 @@ class LLMClient:
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        proxies = {"http": None, "https": None}
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10, proxies=proxies)
             response.raise_for_status()
             data = response.json()
             return data.get("data", [])

@@ -11,6 +11,7 @@ const ENV_FILE_PATH = "res://.env"
 var config = {
 	"llm_api_url": "http://localhost:1234/v1",
 	"llm_model": "google/gemma-4-12b-qat",
+	"llm_api_key": "",
 	"llm_temperature": 0.7,
 	"llm_max_tokens": 16384,
 	"llm_timeout": 180,
@@ -95,6 +96,8 @@ func _apply_config(key: String, value: String) -> void:
 			config["llm_api_url"] = value
 		"llm_model":
 			config["llm_model"] = value
+		"llm_api_key":
+			config["llm_api_key"] = value
 		"llm_temperature":
 			config["llm_temperature"] = value.toFloat()
 		"llm_max_tokens":
@@ -134,6 +137,7 @@ func reset_config() -> void:
 	config = {
 		"llm_api_url": "http://localhost:1234/v1",
 		"llm_model": "google/gemma-4-12b-qat",
+		"llm_api_key": "",
 		"llm_temperature": 0.7,
 		"llm_max_tokens": 16384,
 		"llm_timeout": 180,

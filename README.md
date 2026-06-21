@@ -118,12 +118,16 @@ uv run python pi_mode/analyze.py examples/fantasy.txt
 # LLM API 配置
 LLM_API_URL=http://localhost:1234/v1
 LLM_MODEL=google/gemma-4-12b-qat
+# API密钥（可选，某些服务器可能需要）
+LLM_API_KEY=
 LLM_MAX_TOKENS=16384
 LLM_TIMEOUT=600
 
 # 文本处理
 CHUNK_SIZE=8000
 ```
+
+**注意**: 如果使用需要API密钥的云端服务，请在 `.env` 文件中配置 `LLM_API_KEY`。本地LM Studio通常不需要密钥。
 
 ### 命令行参数
 

@@ -6,6 +6,7 @@ class_name LLMClient
 ## API配置（将从ConfigLoader加载）
 var api_url: String = "http://localhost:1234/v1"
 var model: String = "google/gemma-4-12b-qat"
+var api_key: String = ""
 var temperature: float = 0.7
 var max_tokens: int = 16384
 var timeout_seconds: int = 180
@@ -68,6 +69,7 @@ func _apply_config() -> void:
 	if config_loader:
 		api_url = config_loader.get_config("llm_api_url", api_url)
 		model = config_loader.get_config("llm_model", model)
+		api_key = config_loader.get_config("llm_api_key", api_key)
 		temperature = config_loader.get_config("llm_temperature", temperature)
 		max_tokens = config_loader.get_config("llm_max_tokens", max_tokens)
 		timeout_seconds = config_loader.get_config("llm_timeout", timeout_seconds)
@@ -106,11 +108,14 @@ func chat_completion(messages: Array, response_format: Dictionary = {}, retry_co
 		body["response_format"] = response_format
 	
 	var headers = ["Content-Type: application/json"]
+	if not api_key.is_empty():
+		headers.append("Authorization: Bearer " + api_key)
+		
 	var json_body = JSON.stringify(body)
-	
+		
 	# 启动超时定时器
 	timeout_timer.start(timeout_seconds)
-	
+		
 	var error = http_request.request(url, headers, HTTPClient.METHOD_POST, json_body)
 	if error != OK:
 		timeout_timer.stop()
@@ -194,7 +199,10 @@ func _process_queue() -> void:
 ## 获取可用模型列表
 func get_models(callback: Callable) -> void:
 	var url = api_url + "/models"
-	var error = http_request.request(url, [], HTTPClient.METHOD_GET)
+	var headers = []
+	if not api_key.is_empty():
+		headers.append("Authorization: Bearer " + api_key)
+	var error = http_request.request(url, headers, HTTPClient.METHOD_GET)
 	if error != OK:
 		callback.call([], "获取模型列表失败: " + error_string(error))
 
