@@ -91,8 +91,7 @@ text2game/
 ├── .python-version      # Python 版本（可选）
 ├── .venv/               # 虚拟环境（自动创建）
 ├── run.sh               # Linux/macOS 便捷脚本
-├── run.bat              # Windows 便捷脚本
-└── requirements.txt     # pip 兼容格式
+└── run.bat              # Windows 便捷脚本
 ```
 
 ## 便捷脚本
@@ -161,12 +160,9 @@ bash run.sh
 
 ## 与 pip 的关系
 
-项目同时提供 `requirements.txt`，兼容 pip 用户：
+项目使用 `pyproject.toml` 管理依赖：
 
 ```bash
-# 使用 pip
-pip install -r requirements.txt
-
 # 使用 uv
 uv sync
 ```

@@ -291,7 +291,6 @@ def test_project_structure():
     try:
         required_files = [
             "pyproject.toml",
-            "requirements.txt",
             ".env.example",
             ".gitignore",
             "run.sh",
