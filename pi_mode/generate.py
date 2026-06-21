@@ -12,6 +12,23 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+# 导入子生成器
+try:
+    from generators.visual_novel import VisualNovelGenerator
+except ImportError:
+    # 相对导入失败时尝试直接导入
+    import importlib.util
+    _spec = importlib.util.spec_from_file_location(
+        "visual_novel",
+        Path(__file__).parent / "generators" / "visual_novel.py"
+    )
+    if _spec and _spec.loader:
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        VisualNovelGenerator = _mod.VisualNovelGenerator
+    else:
+        VisualNovelGenerator = None
+
 # 默认配置
 DEFAULT_OUTPUT_DIR = "./generated_games"
 
@@ -24,6 +41,12 @@ class GameGenerator:
     
     def generate_game(self, analysis_file: str, game_type: str, game_config: Optional[Dict] = None) -> str:
         """生成游戏"""
+        # 视觉小说类型使用专用生成器
+        if game_type == "visual_novel" and VisualNovelGenerator is not None:
+            print("使用视觉小说专用生成器...")
+            generator = VisualNovelGenerator(str(self.output_dir))
+            return generator.generate(analysis_file)
+        
         # 读取分析结果
         analysis_path = Path(analysis_file)
         if not analysis_path.exists():
