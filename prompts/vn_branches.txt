@@ -1,0 +1,62 @@
+你是视觉小说剧情设计师。基于以下事件信息，为这个章节生成有意义的分支选择和不同剧情走向。
+
+每个选择都必须导向一段独立的、与原文不同的剧情（alternative path），而不仅仅是设置flag。不同的选择必须体现不同的情感态度、不同的角色互动、以及对后续剧情的不同影响。
+
+## 输入信息
+
+世界观：{world}
+当前事件：{event}
+涉及角色：{characters_info}
+核心冲突：{conflicts}
+人物关系：{relationships}
+前一个事件：{prev_event}
+下一个事件：{next_event}
+
+## 输出格式（严格JSON，不要输出任何其他内容）
+
+{{
+  "common_lines": [
+    {{"speaker": "narrator", "text": "章节开头旁白（1-2句，渲染氛围）"}}
+  ],
+  "choices": [
+    {{
+      "id": "choice_id_a（英文蛇形命名，语义化）",
+      "text": "选择的简短描述（不超过12字）",
+      "sub_text": "选择的内心独白或暗示（不超过25字）",
+      "branch_lines": [
+        {{"speaker": "narrator", "text": "选择后的旁白描述（体现不同走向）"}},
+        {{"speaker": "角色名（必须是涉及角色之一或narrator）", "text": "角色台词（符合角色性格）"}},
+        {{"speaker": "narrator", "text": "剧情走向描述（明确不同于其他选择）"}}
+      ],
+      "consequences": {{
+        "flags": {{"flag_name（英文蛇形命名）": true}},
+        "relationship_changes": {{"角色A_角色B": 1}}
+      }},
+      "ending_hint": "good"
+    }},
+    {{
+      "id": "choice_id_b",
+      "text": "...",
+      "sub_text": "...",
+      "branch_lines": [...],
+      "consequences": {{
+        "flags": {{}},
+        "relationship_changes": {{}}
+      }},
+      "ending_hint": "bad"
+    }}
+  ]
+}}
+
+## 严格要求（违反任何一条将导致结果被拒绝）
+
+1. **数量**：必须生成恰好2-3个选择，不能少于2个，不能多于3个。
+2. **branch_lines**：每个选择的branch_lines必须包含至少3条对话行（speaker + text）。少于3条的选择无效。
+3. **差异化**：不同选择的branch_lines内容必须明显不同，不能只是换个词。至少一个选择接近原文走向，至少一个选择是完全不同的alternative path。
+4. **角色一致性**：branch_lines中speaker为角色名时，必须来自当前事件的涉及角色列表。speaker为"narrator"表示旁白。不能出现不存在于故事中的角色。
+5. **台词质量**：角色台词必须符合角色的traits和background，不能是万能套话。旁白要体现该选择导致的独特剧情走向。
+6. **ending_hint**：只能是"good"、"normal"、"bad"或"none"之一。不能使用其他值。至少一个选择的ending_hint不为"none"。
+7. **consequences**：flags中的key必须是英文蛇形命名（snake_case），不能包含空格或中文。relationship_changes的key格式为"角色A_角色B"，value为整数（正数表示关系改善，负数表示恶化）。
+8. **id**：每个选择的id必须唯一，使用英文蛇形命名，语义化（如"resist_temptation"、"accept_fate"）。
+9. **纯JSON**：只输出JSON对象，不要输出markdown代码块标记（不要```json）、不要输出解释文字、不要输出注释。
+10. **text和sub_text**：text不超过12个中文字符，sub_text不超过25个中文字符。超长的选择无效。

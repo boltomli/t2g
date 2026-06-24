@@ -39,13 +39,13 @@ class GameGenerator:
     def __init__(self, output_dir: str = DEFAULT_OUTPUT_DIR):
         self.output_dir = Path(output_dir)
     
-    def generate_game(self, analysis_file: str, game_type: str, game_config: Optional[Dict] = None) -> str:
+    def generate_game(self, analysis_file: str, game_type: str, game_config: Optional[Dict] = None, use_llm: bool = True) -> str:
         """生成游戏"""
         # 视觉小说类型使用专用生成器
         if game_type == "visual_novel" and VisualNovelGenerator is not None:
             print("使用视觉小说专用生成器...")
             generator = VisualNovelGenerator(str(self.output_dir))
-            return generator.generate(analysis_file)
+            return generator.generate(analysis_file, use_llm=use_llm)
         
         # 读取分析结果
         analysis_path = Path(analysis_file)
@@ -643,6 +643,7 @@ def main():
                        help="游戏类型")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT_DIR, help=f"输出目录 (默认: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("-n", "--name", help="自定义游戏名称")
+    parser.add_argument("--no-llm", action="store_true", help="不使用LLM生成分支剧情（使用模板回退）")
     
     args = parser.parse_args()
     
@@ -651,7 +652,7 @@ def main():
     
     # 生成游戏
     try:
-        project_path = generator.generate_game(args.analysis, args.type)
+        project_path = generator.generate_game(args.analysis, args.type, use_llm=not args.no_llm)
         
         # 如果指定了名称，重命名目录
         if args.name:

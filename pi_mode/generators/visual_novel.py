@@ -1,25 +1,116 @@
 #!/usr/bin/env python3
 """
 视觉小说游戏生成器
-基于分析结果生成完整的Godot视觉小说项目
+基于分析结果生成完整的Godot视觉小说项目，利用LLM生成分支剧情
 """
 
 import json
 import os
 import random
 import shutil
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# 尝试加载 dotenv
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent.parent / '.env'
+    load_dotenv(env_path)
+except ImportError:
+    pass
+except Exception:
+    pass
+
+
+class _LLMClient:
+    """轻量LLM客户端，复用analyze.py的配置"""
+
+    def __init__(self):
+        self.api_url = os.getenv("LLM_API_URL", "http://localhost:1234/v1").rstrip("/")
+        self.model = os.getenv("LLM_MODEL", "google/gemma-4-12b-qat")
+        self.api_key = os.getenv("LLM_API_KEY", "")
+        self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.8"))
+        self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "16384"))
+        self.timeout = int(os.getenv("LLM_TIMEOUT", "600"))
+        self.max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))
+        self.enable_reasoning = os.getenv("ENABLE_REASONING", "false").lower() == "true"
+        self._available: Optional[bool] = None
+
+    def chat_completion(self, messages: List[Dict]) -> Optional[Dict]:
+        """发送聊天请求（带重试），失败返回None"""
+        try:
+            import requests
+        except ImportError:
+            return None
+
+        url = f"{self.api_url}/chat/completions"
+        body = {
+            "messages": messages,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "stream": False,
+            "reasoning": {"enabled": self.enable_reasoning},
+        }
+        if self.model:
+            body["model"] = self.model
+
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        proxies = {"http": None, "https": None}
+
+        for attempt in range(self.max_retries):
+            try:
+                resp = requests.post(url, json=body, headers=headers,
+                                     timeout=self.timeout, proxies=proxies)
+                if resp.status_code == 200:
+                    return resp.json()
+                elif resp.status_code in (429, 500, 502, 503):
+                    time.sleep(3 * (attempt + 1))
+                    continue
+                else:
+                    print(f"  [LLM] HTTP {resp.status_code}: {resp.text[:200]}")
+                    return None
+            except Exception as e:
+                if attempt < self.max_retries - 1:
+                    print(f"  [LLM] 重试 {attempt+1}/{self.max_retries}: {e}")
+                    time.sleep(2 * (attempt + 1))
+                else:
+                    return None
+        return None
+
+    def check_available(self) -> bool:
+        """快速检测LLM是否可用"""
+        if self._available is not None:
+            return self._available
+        try:
+            import requests
+            url = f"{self.api_url}/models"
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            proxies = {"http": None, "https": None}
+            resp = requests.get(url, headers=headers, timeout=5, proxies=proxies)
+            self._available = resp.status_code == 200
+        except Exception:
+            self._available = False
+        return self._available
+
 
 class VisualNovelGenerator:
-    """视觉小说游戏生成器 - 充分利用分析结果中的所有数据"""
+    """视觉小说游戏生成器 - 充分利用分析结果中的所有数据，支持LLM分支剧情"""
 
     def __init__(self, output_dir: str = "./generated_games"):
         self.output_dir = Path(output_dir)
+        self.llm: Optional[_LLMClient] = None
+        self.prompts_dir = Path(__file__).parent.parent.parent / "prompts"
+        self._branch_prompt: Optional[str] = None
 
     # ──────────────────────────── 主入口 ────────────────────────────
-    def generate(self, analysis_file: str, output_name: Optional[str] = None) -> str:
+    def generate(self, analysis_file: str, output_name: Optional[str] = None,
+                 use_llm: bool = True) -> str:
         """生成完整的视觉小说项目"""
         analysis = self._load_analysis(analysis_file)
         # 用源文件名做目录名，而不是世界名
@@ -27,6 +118,15 @@ class VisualNovelGenerator:
         project_path = self.output_dir / game_name
 
         print(f"[VN] 生成视觉小说: {game_name}")
+
+        # 初始化LLM客户端（用于分支剧情生成）
+        self.llm = _LLMClient()
+        llm_ok = use_llm and self.llm.check_available()
+        if llm_ok:
+            print(f"[VN] LLM可用 ({self.llm.api_url})，将使用LLM生成分支剧情")
+            self._branch_prompt = self._load_branch_prompt()
+        else:
+            print(f"[VN] LLM不可用，使用模板生成分支（回退模式）")
 
         analysis_data = analysis.get("analysis", analysis)
         recommended = analysis.get("recommended_types", [])
@@ -46,6 +146,249 @@ class VisualNovelGenerator:
 
         print(f"[VN] OK 生成完成: {project_path}")
         return str(project_path)
+
+    # ──────────────────────────── LLM分支生成 ────────────────────────────
+    def _load_branch_prompt(self) -> str:
+        """加载分支生成提示词"""
+        prompt_file = self.prompts_dir / "vn_branches.txt"
+        if prompt_file.exists():
+            return prompt_file.read_text(encoding="utf-8")
+        return ""
+
+    def _generate_branches_with_llm(self, event: Dict, world: Dict,
+                                     characters: List[Dict], conflicts: List[Dict],
+                                     relationships: List[Dict],
+                                     prev_event: Optional[Dict],
+                                     next_event: Optional[Dict],
+                                     event_idx: int) -> Optional[Dict]:
+        """
+        调用LLM为单个事件生成分支选择和alternative path。
+
+        返回:
+            {
+                "common_lines": [...],   # 章节公共旁白（可能由LLM重写）
+                "choices": [
+                    {
+                        "id": "...",
+                        "text": "...",
+                        "sub_text": "...",
+                        "branch_lines": [...],  # 选择后的不同剧情
+                        "consequences": {...},
+                        "ending_hint": "good|normal|bad|none"
+                    }
+                ]
+            }
+            如果LLM不可用或失败，返回None。
+        """
+        if not self.llm or not self.llm.check_available() or not self._branch_prompt:
+            return None
+
+        # 构建角色信息摘要
+        event_chars = event.get("characters", [])
+        char_map = {c.get("name", ""): c for c in characters}
+        chars_info = []
+        for name in event_chars:
+            c = char_map.get(name)
+            if c:
+                traits = ", ".join(c.get("traits", []))
+                goal = c.get("goal", "")
+                chars_info.append(f"- {name}（{c.get('role', '')}）：特征[{traits}]，目标：{goal}")
+        chars_text = "\n".join(chars_info) if chars_info else "无特定角色"
+
+        # 冲突信息
+        conflicts_text = "\n".join(
+            f"- {c.get('type', '')}：{c.get('description', '')}" for c in conflicts
+        ) if conflicts else "无明确冲突"
+
+        # 关系信息（只取涉及的角色）
+        relevant_rels = [
+            r for r in relationships
+            if r.get("from") in event_chars or r.get("to") in event_chars
+        ]
+        rels_text = "\n".join(
+            f"- {r.get('from', '')} -> {r.get('to', '')}（{r.get('type', '')}）：{r.get('description', '')}"
+            for r in relevant_rels
+        ) if relevant_rels else "无直接关系"
+
+        prev_text = f"标题：{prev_event.get('title', '')}，后果：{prev_event.get('consequences', '')}" if prev_event else "无（这是第一个事件）"
+        next_text = f"标题：{next_event.get('title', '')}，描述：{next_event.get('description', '')[:100]}" if next_event else "无（这是最后一个事件）"
+
+        # 填充提示词模板
+        prompt = self._branch_prompt.format(
+            world=json.dumps(world, ensure_ascii=False),
+            event=json.dumps(event, ensure_ascii=False),
+            characters_info=chars_text,
+            conflicts=conflicts_text,
+            relationships=rels_text,
+            prev_event=prev_text,
+            next_event=next_text,
+        )
+
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": f"请为事件「{event.get('title', '')}」生成分支选择和不同剧情走向。"}
+        ]
+
+        print(f"  [LLM] 生成分支: {event.get('title', f'event_{event_idx}')}")
+
+        max_retries = self.llm.max_retries if self.llm else 3
+        for attempt in range(max_retries):
+            if attempt > 0:
+                wait = 2 * attempt
+                print(f"  [LLM] 第{attempt+1}次尝试（等待{wait}秒）...")
+                time.sleep(wait)
+
+            # ── 发送请求 ──
+            try:
+                response = self.llm.chat_completion(messages)
+            except Exception as e:
+                print(f"  [LLM] 请求异常: {e}")
+                continue
+
+            if not response or not response.get("choices"):
+                print(f"  [LLM] 无响应（尝试 {attempt+1}/{max_retries}）")
+                continue
+
+            content = response["choices"][0]["message"]["content"]
+            parsed = self._parse_llm_json(content)
+
+            if not parsed or not isinstance(parsed, dict):
+                print(f"  [LLM] JSON解析失败（尝试 {attempt+1}/{max_retries}）")
+                continue
+
+            # ── 验证结构 ──
+            choices = parsed.get("choices", [])
+            if not isinstance(choices, list) or len(choices) < 2:
+                print(f"  [LLM] 选择数量不足（{len(choices) if isinstance(choices, list) else 0}，需要2-3个）（尝试 {attempt+1}/{max_retries}）")
+                continue
+
+            validated_choices = []
+            validation_errors = []
+            for i, ch in enumerate(choices):
+                if not isinstance(ch, dict):
+                    validation_errors.append(f"选择{i}不是对象")
+                    continue
+
+                # 校验 id
+                ch_id = ch.get("id", f"llm_choice_{event_idx}_{i}")
+                if not isinstance(ch_id, str) or not ch_id.strip():
+                    ch_id = f"llm_choice_{event_idx}_{i}"
+
+                # 校验 text
+                ch_text = ch.get("text", "")
+                if not isinstance(ch_text, str) or not ch_text.strip():
+                    validation_errors.append(f"选择{i}缺少text")
+                    continue
+                if len(ch_text) > 20:
+                    # 截断而非拒绝，但要记录
+                    ch_text = ch_text[:12]
+
+                # 校验 sub_text
+                ch_sub = ch.get("sub_text", "")
+                if not isinstance(ch_sub, str):
+                    ch_sub = ""
+
+                # 校验 branch_lines
+                branch_lines = ch.get("branch_lines", [])
+                if not isinstance(branch_lines, list) or len(branch_lines) < 3:
+                    validation_errors.append(
+                        f"选择{i}({ch_id}) branch_lines不足3条"
+                        f"（实际{len(branch_lines) if isinstance(branch_lines, list) else 0}条）")
+                    continue
+
+                # 验证 branch_lines 中每条的 speaker 和 text
+                valid_lines = []
+                for bl in branch_lines:
+                    if not isinstance(bl, dict):
+                        continue
+                    sp = bl.get("speaker", "narrator")
+                    txt = bl.get("text", "")
+                    if not isinstance(txt, str) or not txt.strip():
+                        continue
+                    valid_lines.append({"speaker": sp, "text": txt})
+                if len(valid_lines) < 3:
+                    validation_errors.append(f"选择{i}({ch_id}) 有效branch_lines不足3条")
+                    continue
+
+                # 校验 consequences
+                consequences = ch.get("consequences", {})
+                if not isinstance(consequences, dict):
+                    consequences = {}
+                if "flags" not in consequences or not isinstance(consequences.get("flags"), dict):
+                    consequences["flags"] = {}
+                if "relationship_changes" not in consequences or not isinstance(consequences.get("relationship_changes"), dict):
+                    consequences["relationship_changes"] = {}
+                consequences["flags"][ch_id] = True
+
+                # 校验 ending_hint
+                eh = ch.get("ending_hint", "none")
+                if eh not in ("good", "normal", "bad", "none"):
+                    eh = "none"
+
+                validated_choices.append({
+                    "id": ch_id,
+                    "text": ch_text,
+                    "sub_text": ch_sub,
+                    "branch_lines": valid_lines,
+                    "consequences": consequences,
+                    "ending_hint": eh,
+                })
+
+            # 校验选择数量（经过验证后）
+            if len(validated_choices) < 2:
+                errs = "; ".join(validation_errors)
+                print(f"  [LLM] 验证失败（尝试 {attempt+1}/{max_retries}）: {errs}")
+                continue
+
+            # 校验至少一个 ending_hint != "none"
+            has_meaningful_hint = any(c["ending_hint"] != "none" for c in validated_choices)
+            if not has_meaningful_hint:
+                print(f"  [LLM] 所有选择的ending_hint均为none（尝试 {attempt+1}/{max_retries}）")
+                # 不强制重试，但给个警告
+                # （降级为可接受）
+
+            common_lines = parsed.get("common_lines", [])
+            if not isinstance(common_lines, list):
+                common_lines = []
+
+            print(f"  [LLM] OK 生成了 {len(validated_choices)} 个分支选择")
+            return {
+                "common_lines": common_lines,
+                "choices": validated_choices[:3],  # 最多3个
+            }
+
+        # 所有重试都失败
+        print(f"  [LLM] {max_retries}次尝试均失败，回退到模板模式")
+        return None
+
+    @staticmethod
+    def _parse_llm_json(content: str) -> Optional[Dict]:
+        """解析LLM返回的JSON（带容错）"""
+        content = content.strip()
+        # 移除markdown代码块
+        if content.startswith("```"):
+            lines = content.split("\n", 1)
+            content = lines[1] if len(lines) > 1 else content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        # 直接解析
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+
+        # 提取JSON对象
+        start = content.find("{")
+        end = content.rfind("}") + 1
+        if start >= 0 and end > start:
+            try:
+                return json.loads(content[start:end])
+            except json.JSONDecodeError:
+                pass
+
+        return None
 
     # ──────────────────────────── 数据加载 ────────────────────────────
     def _load_analysis(self, path: str) -> Dict:
@@ -130,18 +473,52 @@ class VisualNovelGenerator:
                 "atmosphere": atmosphere,
                 "lines": [],
                 "choices": [],
+                "has_branches": False,
                 "knowledge_triggers": []
             }
 
-            # 生成对话行
-            chapter["lines"] = self._generate_chapter_lines(
-                event, characters, world, atmosphere, i, events
+            # 尝试用LLM生成分支剧情
+            prev_event = events[i - 1] if i > 0 else None
+            next_event = events[i + 1] if i < len(events) - 1 else None
+            llm_branches = self._generate_branches_with_llm(
+                event, world, characters, conflicts,
+                analysis.get("relationships", []),
+                prev_event, next_event, i
             )
 
-            # 生成选择（从冲突和关系中衍生）
-            chapter["choices"] = self._generate_chapter_choices(
-                event, conflicts, analysis.get("relationships", []), characters, i, events
-            )
+            if llm_branches and llm_branches.get("choices"):
+                # 使用LLM生成的分支
+                chapter["has_branches"] = True
+                # 生成基础旁白行（事件描述）
+                base_lines = self._generate_chapter_lines(
+                    event, characters, world, atmosphere, i, events
+                )
+                # 如果LLM提供了common_lines，追加到基础行后面
+                common_lines = llm_branches.get("common_lines", [])
+                if common_lines:
+                    chapter["lines"] = base_lines + common_lines
+                else:
+                    chapter["lines"] = base_lines
+                chapter["choices"] = llm_branches["choices"]
+                print(f"  [VN] 章节 {order} 使用LLM分支 ({len(chapter['choices'])} 个选择)")
+            else:
+                # 回退到模板生成
+                chapter["lines"] = self._generate_chapter_lines(
+                    event, characters, world, atmosphere, i, events
+                )
+                chapter["choices"] = self._generate_chapter_choices(
+                    event, conflicts, analysis.get("relationships", []),
+                    characters, i, events
+                )
+                # 为模板选择添加空的branch_lines（后续用consequences行作为branch）
+                for ch in chapter["choices"]:
+                    if "branch_lines" not in ch:
+                        ch["branch_lines"] = [
+                            {"speaker": "narrator", "text": ch.get("sub_text", ch.get("text", ""))}
+                        ]
+                    if "ending_hint" not in ch:
+                        ch["ending_hint"] = "none"
+                print(f"  [VN] 章节 {order} 使用模板分支 ({len(chapter['choices'])} 个选择)")
 
             # 知识碎片触发
             chapter["knowledge_triggers"] = self._generate_knowledge_triggers(
@@ -1092,6 +1469,8 @@ var current_text: String = ""
 var displayed_chars: int = 0
 var is_typing: bool = false
 var is_awaiting_choice: bool = false
+var is_playing_branch: bool = false
+var ending_hints: Array = []
 var completed_chapters: Array = []
 var flags: Dictionary = {{}}
 var relationship_values: Dictionary = {{}}
@@ -1229,6 +1608,10 @@ func _advance_line() -> void:
 
 ## ── 章节完成 ──
 func _on_chapter_finished() -> void:
+    # 如果正在播放分支行，转到分支完成处理
+    if is_playing_branch:
+        _on_branch_finished()
+        return
     completed_chapters.append(current_chapter_id)
 
     # 获取章节的选择
@@ -1297,12 +1680,34 @@ func _on_choice_made(choice: Dictionary) -> void:
     for key in new_flags:
         flags[key] = new_flags[key]
 
+    # 记录结局倾向
+    var hint = choice.get("ending_hint", "none")
+    if hint != "none":
+        ending_hints.append(hint)
+
+    # 播放分支剧情（alternative path）
+    var branch_lines = choice.get("branch_lines", [])
+    if branch_lines.size() > 0:
+        _play_branch_lines(branch_lines)
+    else:
+        _go_to_next_chapter()
+
+## ── 分支剧情播放 ──
+func _play_branch_lines(branch_lines: Array) -> void:
+    # 将分支行设为当前行，播放完后继续下一章
+    is_playing_branch = True
+    current_lines = branch_lines
+    current_line_index = 0
+    _show_current_line()
+
+## ── 分支行播放完毕 ──
+func _on_branch_finished() -> void:
+    is_playing_branch = False
     # 检查结局
     var ending_id = _check_endings()
     if ending_id != "":
         _show_ending(ending_id)
         return
-
     _go_to_next_chapter()
 
 func _check_endings() -> String:
@@ -1392,11 +1797,18 @@ func _determine_ending() -> void:
             elif flag in despair_flags:
                 negative_count += 1
     
+    # 统计LLM分支的结局倾向
+    for hint in ending_hints:
+        if hint == "good":
+            positive_count += 1
+        elif hint == "bad":
+            negative_count += 1
+    
     var total_rel = 0
     for key in relationship_values:
         total_rel += relationship_values[key]
     
-    print("[VN] Ending: positive=", positive_count, " negative=", negative_count, " rel=", total_rel)
+    print("[VN] Ending: positive=", positive_count, " negative=", negative_count, " rel=", total_rel, " hints=", ending_hints.size())
     
     var ending_id = "normal"
     if positive_count >= 3 and total_rel >= 0:
@@ -1440,6 +1852,13 @@ func _build_choice_summary() -> Array:
                 positive_count += 1
             elif flag in negative_flags:
                 negative_count += 1
+    
+    # 统计LLM分支结局倾向
+    for hint in ending_hints:
+        if hint == "good":
+            positive_count += 1
+        elif hint == "bad":
+            negative_count += 1
     
     # 选择倾向
     if positive_count > negative_count:
