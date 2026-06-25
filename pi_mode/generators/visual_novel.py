@@ -1695,14 +1695,14 @@ func _on_choice_made(choice: Dictionary) -> void:
 ## ── 分支剧情播放 ──
 func _play_branch_lines(branch_lines: Array) -> void:
     # 将分支行设为当前行，播放完后继续下一章
-    is_playing_branch = True
+    is_playing_branch = true
     current_lines = branch_lines
     current_line_index = 0
     _show_current_line()
 
 ## ── 分支行播放完毕 ──
 func _on_branch_finished() -> void:
-    is_playing_branch = False
+    is_playing_branch = false
     # 检查结局
     var ending_id = _check_endings()
     if ending_id != "":
