@@ -1590,6 +1590,10 @@ func _input(event: InputEvent) -> void:
         return
 
     if event is InputEventMouseButton and event.pressed:
+        # 结局显示完毕，点击返回主菜单
+        if _is_ending_displayed and not is_typing:
+            get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+            return
         print("[VN] click, is_typing=", is_typing, " idx=", current_line_index)
         if is_typing:
             _skip_typewriter()
@@ -1608,6 +1612,13 @@ func _advance_line() -> void:
 
 ## ── 章节完成 ──
 func _on_chapter_finished() -> void:
+    # 结局行播完后，等待玩家点击返回
+    if _is_ending_displayed:
+        return
+    # 结局行刚刚播完，切换到等待点击状态
+    if _is_showing_ending:
+        _on_ending_lines_finished()
+        return
     # 如果正在播放分支行，转到分支完成处理
     if is_playing_branch:
         _on_branch_finished()
@@ -1703,16 +1714,15 @@ func _play_branch_lines(branch_lines: Array) -> void:
 ## ── 分支行播放完毕 ──
 func _on_branch_finished() -> void:
     is_playing_branch = false
-    # 检查结局
-    var ending_id = _check_endings()
-    if ending_id != "":
-        _show_ending(ending_id)
-        return
+    # 不在这里检查结局，结局只在所有章节完成后由_determine_ending决定
     _go_to_next_chapter()
 
 func _check_endings() -> String:
     for ending_id in endings_data:
         var ending = endings_data[ending_id]
+        # 只检查有trigger字段的结局，没有trigger的结局由_determine_ending决定
+        if not ending.has("trigger"):
+            continue
         var trigger = ending.get("trigger", {{}})
         if _evaluate_trigger(trigger):
             return ending_id
@@ -1819,6 +1829,8 @@ func _determine_ending() -> void:
     _show_ending(ending_id)
 
 ## ── 结局显示 ──
+var _is_ending_displayed: bool = false
+var _is_showing_ending: bool = false
 func _show_ending(ending_id: String) -> void:
     var ending = endings_data.get(ending_id, {{}})
     var ending_lines = ending.get("lines", [])
@@ -1830,11 +1842,16 @@ func _show_ending(ending_id: String) -> void:
     var summary_lines = _build_choice_summary()
     current_lines = summary_lines + ending_lines
     current_line_index = 0
+    _is_ending_displayed = false
+    _is_showing_ending = true
     _show_current_line()
 
-    # 结局显示完毕后返回主菜单
-    await get_tree().create_timer(10.0).timeout
-    get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+## 结局文字全部显示完毕后，等待玩家点击返回主菜单
+func _on_ending_lines_finished() -> void:
+    _is_ending_displayed = true
+    _is_showing_ending = false
+    click_continue.text = "点击返回主菜单"
+    click_continue.visible = true
 
 func _build_choice_summary() -> Array:
     var lines = []
