@@ -26,6 +26,21 @@ function get(name) {
   return name.split('.').reduce((o,k) => o && o[k], state);
 }
 
+// Chapbook-compatible story object
+window.story = {
+  state: {
+    get: function(name, defaultVal) {
+      const v = get(name);
+      return v !== undefined ? v : (defaultVal !== undefined ? defaultVal : undefined);
+    },
+    set: function(name, value) { set(name, value); },
+    has: function(name) { return get(name) !== undefined; }
+  },
+  hasPassage: function(name) {
+    return document.querySelector('tw-passage[name="' + name + '"]') !== null;
+  }
+};
+
 function set(name, value) {
   const parts = name.split('.');
   let obj = state;
@@ -169,7 +184,10 @@ function renderText(text) {
       return '<a href="javascript:void(0)" data-cb-go="' + trail[0] + '">Back</a>';
     }
     const val = get(expr);
-    return val !== undefined ? val : match;
+    if (val !== undefined) return val;
+    // Try evaluating as JS expression (e.g. story.state.get('x', 0))
+    try { return new Function('return ' + expr)(); } catch(e) {}
+    return match;
   });
   // Links: [[text->passage]] or [[passage]]
   text = text.replace(/\[\[([^\]]+?)\]\]/g, (match, inner) => {

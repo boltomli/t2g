@@ -47,6 +47,24 @@ uv run python pi_mode/generate.py -a .cache/<hash>/result.json -t twine
 # 3. 编译为 HTML（见下方 Twine 编译指南）
 ```
 
+### 方式4: 优化分析结果
+
+对已生成的分析结果进行定向优化，不需要重新分析原文：
+
+```bash
+# 优化角色深度
+uv run python pi_mode/optimize.py -a result.json -r "增加角色的背景故事深度，让每个角色更立体"
+
+# 从文件读取需求
+uv run python pi_mode/optimize.py -a result.json -f my_requirements.txt
+
+# 优化事件时间线
+uv run python pi_mode/optimize.py -a result.json -r "重新梳理事件时间线，确保因果关系清晰"
+
+# 指定输出路径（默认生成 .optimized.json）
+uv run python pi_mode/optimize.py -a result.json -r "增加更多冲突" -o optimized.json
+```
+
 ## 📊 分析流程
 
 ### 阶段1: 文本分块分析
@@ -180,9 +198,11 @@ text2game/
 │   ├── analyze.txt       # 文本分析
 │   ├── recommend.txt     # 类型推荐
 │   ├── merge.txt         # 结果合并
+│   ├── optimize.txt      # 分析结果优化
 │   └── vn_branches.txt   # 视觉小说分支生成
 ├── pi_mode/              # Python脚本
 │   ├── analyze.py        # 分析器
+│   ├── optimize.py       # 分析结果优化器
 │   ├── generate.py       # 游戏生成（统一入口）
 │   ├── compile_twee.py   # Twee→HTML 编译器
 │   └── generators/       # 游戏类型生成器
