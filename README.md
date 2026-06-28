@@ -10,7 +10,7 @@
   - 事件时间线梳理（支持非线性叙事）
   - 人物关系网络生成
 - 🎮 **游戏类型推荐**: 基于文本特征推荐最适合的游戏类型
-- ⚡ **自动生成**: 一键生成完整的Godot游戏项目
+- ⚡ **自动生成**: 一键生成Godot游戏项目或Twine交互式故事
 - 💾 **智能缓存**: 分块独立缓存，重复分析秒完成
 - ⚙️ **配置管理**: 支持 .env 文件配置
 
@@ -33,6 +33,18 @@ uv run python pi_mode/analyze.py examples/fantasy.txt
 
 # 便捷脚本
 ./run.sh analyze examples/fantasy.txt
+```
+
+### 方式3: 生成 Twine 故事
+
+```bash
+# 1. 分析文本
+uv run python pi_mode/analyze.py examples/fantasy.txt
+
+# 2. 生成 Twee 源文件（选择 twine 类型）
+uv run python pi_mode/generate.py -a .cache/<hash>/result.json -t twine
+
+# 3. 编译为 HTML（见下方 Twine 编译指南）
 ```
 
 ## 📊 分析流程
@@ -167,32 +179,99 @@ text2game/
 ├── prompts/              # 提示词
 │   ├── analyze.txt       # 文本分析
 │   ├── recommend.txt     # 类型推荐
-│   └── merge.txt         # 结果合并
+│   ├── merge.txt         # 结果合并
+│   └── vn_branches.txt   # 视觉小说分支生成
 ├── pi_mode/              # Python脚本
 │   ├── analyze.py        # 分析器
-│   └── generate.py       # 游戏生成
+│   ├── generate.py       # 游戏生成（统一入口）
+│   ├── compile_twee.py   # Twee→HTML 编译器
+│   └── generators/       # 游戏类型生成器
+│       ├── visual_novel.py   # Godot 视觉小说
+│       └── twine.py          # Twine 交互式故事
 ├── godot_project/        # Godot项目
-│   ├── project.godot
-│   ├── scenes/main.tscn
-│   └── scripts/
-│       ├── main.gd
-│       ├── llm_client.gd
-│       ├── text_analyzer.gd
-│       ├── game_generator.gd
-│       └── config_loader.gd
 ├── examples/             # 示例文本
 └── test_system.py        # 测试脚本
 ```
 
 ## 🎮 支持的游戏类型
 
-| 类型 | 说明 |
-|------|------|
-| RPG | 角色扮演 |
-| Adventure | 冒险解谜 |
-| Visual Novel | 视觉小说 |
-| Strategy | 策略模拟 |
-| Action | 动作游戏 |
+| 类型 | 参数 | 输出格式 | 说明 |
+|------|------|----------|------|
+| RPG | `rpg` | Godot 项目 | 角色扮演 |
+| Adventure | `adventure` | Godot 项目 | 冒险解谜 |
+| Visual Novel | `visual_novel` | Godot 项目 | 视觉小说 |
+| Strategy | `strategy` | Godot 项目 | 策略模拟 |
+| Action | `action` | Godot 项目 | 动作游戏 |
+| **Twine 故事** | `twine` | **Twee 源文件** | **交互式分支叙事，编译为单文件 HTML** |
+
+### Twine 故事模式
+
+生成 [Chapbook](https://klembot.github.io/chapbook/) 格式的 Twee 源文件，可编译为浏览器可运行的单文件 HTML。
+
+**优势：**
+- 无需安装 Godot，浏览器直接运行
+- 单文件分发，双击即玩
+- 天然支持分支叙事、条件跳转、变量系统
+- 可用 Twine 编辑器继续编辑
+
+## 📦 Twine 编译指南
+
+生成的 `.twee` 文件可通过以下方式编译为可运行的 HTML：
+
+### 方式 1: twee-cli（推荐）
+
+```bash
+# 安装 twee-cli（需要 Node.js）
+npm install -g twee-cli
+
+# 编译为 HTML
+twee build generated_games/my_story_twine/my_story_twine.twee -o story.html
+
+# 指定故事格式（默认 Harlowe，Chapbook 需要单独安装格式文件）
+twee build story.twee --format chapbook -o story.html
+```
+
+### 方式 2: Twine 编辑器
+
+1. 下载安装 [Twine 2](https://twinery.org/)
+2. 打开 Twine → 故事 → 导入
+3. 选择生成的 `.twee` 文件
+4. 在编辑器中预览和修改
+5. 构建为 HTML：故事 → 构建为 HTML
+
+### 方式 3: 在线编译
+
+- [Twee 3 online tool](https://twee3.github.io/twee3-online-tool/)
+- 上传 `.twee` 文件，选择格式，导出 HTML
+
+### 方式 4: 项目内置编译器（推荐）
+
+```bash
+# 编译单个 .twee 文件
+uv run python pi_mode/compile_twee.py generated_games/my_story_twine/my_story_twine.twee
+
+# 编译目录下所有 .twee 文件
+uv run python pi_mode/compile_twee.py generated_games/my_story_twine/
+
+# 指定输出路径
+uv run python pi_mode/compile_twee.py story.twee -o output.html
+```
+
+编译器会自动下载并缓存 Chapbook 运行时（约 140KB），生成的 HTML 是完全自包含的单文件。
+
+### 编译后的使用
+
+编译生成的 `story.html` 是一个独立文件：
+- 双击即可在浏览器中运行
+- 可直接发送给他人，无需任何依赖
+- 支持移动端浏览器
+
+```bash
+# 直接打开
+start story.html        # Windows
+open story.html          # macOS
+xdg-open story.html      # Linux
+```
 
 ## 🧪 测试
 
