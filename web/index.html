@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text2Game - 文本转游戏</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  background: #0f0f1a;
+  color: #e0e0e0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 12px 24px;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header h1 {
+  font-size: 18px;
+  color: #e8d4b4;
+  font-weight: 600;
+}
+
+.header .subtitle {
+  font-size: 12px;
+  color: #666;
+}
+
+.container {
+  display: flex;
+  height: calc(100vh - 52px);
+}
+
+/* ── 左侧面板 ── */
+.left-panel {
+  width: 420px;
+  min-width: 360px;
+  background: #14142a;
+  border-right: 1px solid #2a2a4a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.input-section {
+  padding: 16px;
+  border-bottom: 1px solid #2a2a4a;
+  flex-shrink: 0;
+}
+
+.input-section label {
+  display: block;
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+textarea {
+  width: 100%;
+  height: 160px;
+  background: #1e1e3a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  font-family: inherit;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #e8d4b4;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #e8d4b4 0%, #d4b48a 100%);
+  color: #1a1a2e;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f0dcc0 0%, #e0c09a 100%);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #2a2a4a;
+  color: #ccc;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #3a3a5a;
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, #4a9eff 0%, #2a7edf 100%);
+  color: #fff;
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5ab0ff 0%, #3a8eef 100%);
+  transform: translateY(-1px);
+}
+
+.upload-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.upload-row .btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* ── 分析结果 ── */
+.analysis-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.analysis-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.analysis-section::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.analysis-placeholder {
+  text-align: center;
+  color: #555;
+  padding: 40px 20px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.analysis-card {
+  background: #1e1e3a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.analysis-card h3 {
+  font-size: 13px;
+  color: #e8d4b4;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analysis-card p, .analysis-card li {
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.7;
+}
+
+.analysis-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.analysis-card li::before {
+  content: "·";
+  color: #e8d4b4;
+  margin-right: 6px;
+}
+
+.generate-section {
+  padding: 16px;
+  border-top: 1px solid #2a2a4a;
+  flex-shrink: 0;
+}
+
+/* ── 进度条 ── */
+.progress-bar {
+  height: 4px;
+  background: #1e1e3a;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  display: none;
+}
+
+.progress-bar.active {
+  display: block;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e8d4b4, #4a9eff);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.status-text {
+  font-size: 12px;
+  color: #666;
+  min-height: 18px;
+}
+
+.status-text.error {
+  color: #ff6b6b;
+}
+
+.status-text.success {
+  color: #6bff8e;
+}
+
+/* ── 右侧游戏区 ── */
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+}
+
+.game-header {
+  padding: 10px 16px;
+  background: #12122a;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.game-header span {
+  font-size: 13px;
+  color: #888;
+}
+
+.game-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  gap: 16px;
+}
+
+.game-placeholder .icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.game-placeholder p {
+  font-size: 14px;
+}
+
+#game-frame {
+  width: 100%;
+  flex: 1;
+  border: none;
+  display: none;
+}
+
+#game-frame.active {
+  display: block;
+}
+
+/* ── 文件上传覆盖 ── */
+.file-input {
+  display: none;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+  .left-panel {
+    width: 100%;
+    min-width: 0;
+    max-height: 50vh;
+  }
+  .right-panel {
+    min-height: 50vh;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Text2Game</h1>
+  <span class="subtitle">上传文本，生成互动故事</span>
+</div>
+
+<div class="container">
+  <!-- 左侧面板 -->
+  <div class="left-panel">
+    <div class="input-section">
+      <label>输入或粘贴文本</label>
+      <textarea id="text-input" placeholder="在此粘贴小说、故事、剧本等文本内容..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-analyze" onclick="doAnalyze()">分析文本</button>
+        <button class="btn btn-secondary" id="btn-clear" onclick="doClear()">清空</button>
+      </div>
+      <div class="upload-row">
+        <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">上传 .txt 文件</button>
+        <button class="btn btn-secondary" onclick="loadExample()">加载示例</button>
+        <input type="file" class="file-input" id="file-input" accept=".txt,.text" onchange="handleUpload(event)">
+      </div>
+    </div>
+
+    <div class="analysis-section" id="analysis-section">
+      <div class="analysis-placeholder" id="placeholder">
+        <p>输入文本后点击「分析文本」</p>
+        <p>系统将自动提取世界观、角色、主题等信息</p>
+      </div>
+      <div id="analysis-result" style="display:none"></div>
+    </div>
+
+    <div class="generate-section">
+      <div class="progress-bar" id="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="status-text" id="status-text"></div>
+      <button class="btn btn-accent" id="btn-generate" onclick="doGenerate()" disabled style="width:100%;margin-top:8px">
+        生成互动故事
+      </button>
+    </div>
+  </div>
+
+  <!-- 右侧游戏区 -->
+  <div class="right-panel">
+    <div class="game-header">
+      <span id="game-title">游戏预览</span>
+    </div>
+    <div class="game-placeholder" id="game-placeholder">
+      <div class="icon">&#9881;</div>
+      <p>生成完成后在此预览游戏</p>
+    </div>
+    <iframe id="game-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+</div>
+
+<script>
+let currentAnalysis = null;
+let eventSource = null;
+
+// ── 分析文本 ──
+async function doAnalyze() {
+  const text = document.getElementById('text-input').value.trim();
+  if (!text) {
+    setStatus('请输入文本内容', 'error');
+    return;
+  }
+
+  setButton('btn-analyze', true);
+  setStatus('正在分析文本...', '');
+  showProgress(0.1);
+
+  try {
+    const resp = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await resp.json();
+    if (data.error) {
+      setStatus('分析失败: ' + data.error, 'error');
+      setButton('btn-analyze', false);
+      hideProgress();
+      return;
+    }
+    // 开始监听进度
+    listenProgress((info) => {
+      if (info.error) {
+        setStatus('分析失败: ' + info.error, 'error');
+        setButton('btn-analyze', false);
+        hideProgress();
+        return;
+      }
+      if (info.done && info.result) {
+        currentAnalysis = info.result;
+        showAnalysis(info.result);
+        setStatus('分析完成', 'success');
+        setButton('btn-analyze', false);
+        document.getElementById('btn-generate').disabled = false;
+        hideProgress();
+      }
+    });
+  } catch (e) {
+    setStatus('请求失败: ' + e.message, 'error');
+    setButton('btn-analyze', false);
+    hideProgress();
+  }
+}
+
+// ── 生成游戏 ──
+async function doGenerate() {
+  if (!currentAnalysis) {
+    setStatus('请先分析文本', 'error');
+    return;
+  }
+
+  setButton('btn-generate', true);
+  setStatus('正在生成互动故事...', '');
+  showProgress(0.1);
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysis: currentAnalysis })
+    });
+    const data = await resp.json();
+    if (data.error) {
+      setStatus('生成失败: ' + data.error, 'error');
+      setButton('btn-generate', false);
+      hideProgress();
+      return;
+    }
+    listenProgress((info) => {
+      if (info.error) {
+        setStatus('生成失败: ' + info.error, 'error');
+        setButton('btn-generate', false);
+        hideProgress();
+        return;
+      }
+      updateProgress(info.progress || 0);
+      if (info.step) setStatus(info.step, '');
+      if (info.done && info.url) {
+        loadGame(info.url);
+        setStatus('生成完成！', 'success');
+        setButton('btn-generate', false);
+        hideProgress();
+      }
+    });
+  } catch (e) {
+    setStatus('请求失败: ' + e.message, 'error');
+    setButton('btn-generate', false);
+    hideProgress();
+  }
+}
+
+// ── SSE 进度监听 ──
+function listenProgress(callback) {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource('/api/progress');
+  eventSource.onmessage = (e) => {
+    try {
+      const info = JSON.parse(e.data);
+      callback(info);
+      if (info.done) eventSource.close();
+    } catch (_) {}
+  };
+  eventSource.onerror = () => {
+    eventSource.close();
+  };
+}
+
+// ── 加载游戏 ──
+function loadGame(url) {
+  const frame = document.getElementById('game-frame');
+  const placeholder = document.getElementById('game-placeholder');
+  frame.src = url;
+  frame.classList.add('active');
+  placeholder.style.display = 'none';
+}
+
+// ── 显示分析结果 ──
+function showAnalysis(analysis) {
+  document.getElementById('placeholder').style.display = 'none';
+  const container = document.getElementById('analysis-result');
+  container.style.display = 'block';
+  container.innerHTML = '';
+
+  // 世界观
+  const world = analysis.world || {};
+  if (world.name || world.era || world.location || world.description) {
+    const card = makeCard('世界观');
+    let html = '';
+    if (world.name) html += `<li>名称: ${esc(world.name)}</li>`;
+    if (world.era) html += `<li>时代: ${esc(world.era)}</li>`;
+    if (world.location) html += `<li>地点: ${esc(world.location)}</li>`;
+    if (world.description) html += `<li>${esc(world.description)}</li>`;
+    card.innerHTML = `<ul>${html}</ul>`;
+    container.appendChild(card);
+  }
+
+  // 角色
+  const chars = analysis.characters || [];
+  if (chars.length > 0) {
+    const card = makeCard('角色');
+    let html = '';
+    chars.slice(0, 8).forEach(c => {
+      html += `<li><b>${esc(c.name || '?')}</b> — ${esc(c.role || '')}</li>`;
+    });
+    if (chars.length > 8) html += `<li>...等 ${chars.length} 个角色</li>`;
+    card.innerHTML = `<ul>${html}</ul>`;
+    container.appendChild(card);
+  }
+
+  // 主题
+  const themes = analysis.themes || [];
+  if (themes.length > 0) {
+    const card = makeCard('主题');
+    card.innerHTML = `<p>${themes.map(esc).join(' / ')}</p>`;
+    container.appendChild(card);
+  }
+
+  // 氛围
+  if (analysis.atmosphere) {
+    const card = makeCard('氛围');
+    card.innerHTML = `<p>${esc(analysis.atmosphere)}</p>`;
+    container.appendChild(card);
+  }
+}
+
+function makeCard(title) {
+  const div = document.createElement('div');
+  div.className = 'analysis-card';
+  div.innerHTML = `<h3>${title}</h3>`;
+  return div;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── 工具函数 ──
+function setStatus(msg, type) {
+  const el = document.getElementById('status-text');
+  el.textContent = msg;
+  el.className = 'status-text' + (type ? ' ' + type : '');
+}
+
+function setButton(id, disabled) {
+  document.getElementById(id).disabled = disabled;
+}
+
+function showProgress(pct) {
+  document.getElementById('progress-bar').classList.add('active');
+  updateProgress(pct);
+}
+
+function updateProgress(pct) {
+  document.getElementById('progress-fill').style.width = (pct * 100) + '%';
+}
+
+function hideProgress() {
+  document.getElementById('progress-bar').classList.remove('active');
+  updateProgress(0);
+}
+
+function doClear() {
+  document.getElementById('text-input').value = '';
+  currentAnalysis = null;
+  document.getElementById('analysis-result').style.display = 'none';
+  document.getElementById('analysis-result').innerHTML = '';
+  document.getElementById('placeholder').style.display = '';
+  document.getElementById('btn-generate').disabled = true;
+  setStatus('', '');
+  hideProgress();
+}
+
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('text-input').value = ev.target.result;
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+}
+
+function loadExample() {
+  const example = `北平的冬天，冷得刺骨。祥子拉着车，在西直门外的大街上跑着。
+
+他今年二十二岁，身量很高，铁扇面似的胸，直硬的背。他确乎有点像一棵树，坚壮，沉默，而又有生气。
+
+祥子从乡间来到北平，一心想买上一辆自己的车。他省吃俭用了三年，终于凑足了一百块钱，买了一辆新车。
+
+这车是他用血汗换来的。他把买车那天当作自己的生日。
+
+可是好景不长。战争的消息传来，祥子为了多赚两块钱，冒险出城，连人带车被大兵捉了去。
+
+车没了。但祥子没有灰心。他相信，只要他肯吃苦，总有一天还能买上车。
+
+回到人和车厂，刘四爷的女儿虎妞看上了他。虎妞长得虎头虎脑，三十七八岁，帮助父亲管理车厂，是个厉害角色。
+
+"祥子，你给我过来！"虎妞喊道。
+
+祥子低着头，不敢看她。他知道虎妞的心思，但他不想和她有什么牵扯。他只想攒钱买车。
+
+老马是个人力车夫，曾经也有过自己的车。如今车卖了，人也老了，带着孙子小马在寒风中挣扎。
+
+"干了一辈子，落得个什么？"老马叹气道。"拉一辈子车，最后还是穷死。"
+
+祥子听了，心里打了个寒颤。他不想变成老马那样。
+
+可这世道，容得下一个车夫的梦吗？`;
+  document.getElementById('text-input').value = example;
+}
+</script>
+</body>
+</html>

@@ -367,7 +367,7 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
         lines = []
         lines.append("config:")
         lines.append("  page-transition: fade")
-        lines.append("story.initialPassage: 'Chapter_01'")
+        lines.append("story.initialPassage: 'Start'")
         lines.append("--")
         lines.append("")
 
