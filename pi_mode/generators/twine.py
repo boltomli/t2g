@@ -358,7 +358,7 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
 
         if llm_result:
             # 使用 LLM 生成的内容
-            return self._build_chapter_from_llm(llm_result, order, event_chars)
+            return self._build_chapter_from_llm(llm_result, order, event_chars, all_events)
         
         # 回退到模板生成
         return self._build_chapter_from_template(
@@ -367,7 +367,8 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
         )
 
     def _build_chapter_from_llm(self, llm_result: Dict, order: int,
-                                event_chars: List[str]) -> Dict:
+                                event_chars: List[str],
+                                all_events: List[Dict]) -> Dict:
         """使用 LLM 结果构建章节"""
         lines = []
         
@@ -388,7 +389,11 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
             lines.append("---")
             lines.append("")
             for choice in choices:
-                target = choice.get("target", f"Chapter_{order + 1:02d}")
+                # 使用 _next_chapter_id 确保 target 有效
+                target = choice.get("target")
+                # 验证 target 是否存在
+                if not target or not self._chapter_exists(target, all_events):
+                    target = self._next_chapter_id(order, all_events)
                 text = choice.get("text", "继续")
                 lines.append(f"> [[{text}->{target}]]")
             # 变量设置
@@ -399,15 +404,32 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
                     lines.append(f"[if {flag}]story.state.set('{flag}', true)[/]")
         else:
             # 无选择
+            next_id = self._next_chapter_id(order, all_events)
             lines.append("---")
             lines.append("")
-            lines.append(f"[[继续->Chapter_{order + 1:02d}]]")
+            lines.append(f"[[继续->{next_id}]]")
         
         return {
             "name": f"Chapter_{order:02d}",
             "tags": ["chapter", "llm"],
             "source": "\n".join(lines),
         }
+
+    def _chapter_exists(self, chapter_id: str, all_events: List[Dict]) -> bool:
+        """检查章节是否存在"""
+        # 检查是否是有效的章节 ID
+        if chapter_id.startswith("Chapter_"):
+            try:
+                num = int(chapter_id.split("_")[1])
+                # 检查是否有对应的事件
+                for event in all_events:
+                    if event.get("order", 0) == num:
+                        return True
+                return False
+            except (IndexError, ValueError):
+                return False
+        # 非 Chapter 开头的（如 Ending）认为是有效的
+        return True
 
     def _build_chapter_from_template(self, event: Dict, event_idx: int,
                                      all_events: List[Dict], world: Dict,
