@@ -10,7 +10,7 @@ import random
 import shutil
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # 尝试加载 dotenv
 try:
@@ -102,6 +102,9 @@ class _LLMClient:
 class VisualNovelGenerator:
     """视觉小说游戏生成器 - 充分利用分析结果中的所有数据，支持LLM分支剧情"""
 
+    # 缓存目录
+    CACHE_DIR = Path(__file__).parent.parent.parent / ".cache" / "vn"
+
     def __init__(self, output_dir: str = "./generated_games"):
         self.output_dir = Path(output_dir)
         self.llm: Optional[_LLMClient] = None
@@ -109,6 +112,10 @@ class VisualNovelGenerator:
         self._branch_prompt: Optional[str] = None
         self._outline_prompt: Optional[str] = None
         self._branch_planning_prompt: Optional[str] = None
+        
+        # 初始化缓存目录
+        self.cache_dir = self.CACHE_DIR
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     # ──────────────────────────── 主入口 ────────────────────────────
     def generate(self, analysis_file: str, output_name: Optional[str] = None,
@@ -169,6 +176,79 @@ class VisualNovelGenerator:
             return prompt_file.read_text(encoding="utf-8")
         return ""
 
+    # ──────────────────────────── 缓存系统 ────────────────────────────
+    def _get_cache_key(self, data: Any, prefix: str = "") -> str:
+        """生成缓存键（基于数据的MD5哈希）"""
+        import hashlib
+        if isinstance(data, str):
+            text = data
+        else:
+            text = json.dumps(data, sort_keys=True, ensure_ascii=False)
+        text_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
+        return f"{prefix}_{text_hash}" if prefix else text_hash
+
+    def _get_cache_path(self, cache_key: str) -> Path:
+        """获取缓存文件路径"""
+        return self.cache_dir / f"{cache_key}.json"
+
+    def _load_from_cache(self, cache_key: str) -> Optional[Dict]:
+        """从缓存加载结果"""
+        cache_path = self._get_cache_path(cache_key)
+        if cache_path.exists():
+            try:
+                with open(cache_path, 'r', encoding='utf-8') as f:
+                    cached = json.load(f)
+                print(f"    [缓存] 命中: {cache_key[:12]}...")
+                return cached.get("result")
+            except Exception as e:
+                print(f"    [缓存] 读取失败: {e}")
+        return None
+
+    def _save_to_cache(self, cache_key: str, result: Dict, preview: str = "") -> None:
+        """保存结果到缓存"""
+        try:
+            cache_path = self._get_cache_path(cache_key)
+            cache_data = {
+                "cache_key": cache_key,
+                "preview": preview[:100] if preview else "",
+                "timestamp": time.time(),
+                "result": result
+            }
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            print(f"    [缓存] 已保存: {cache_key[:12]}...")
+        except Exception as e:
+            print(f"    [缓存] 保存失败: {e}")
+
+    def clear_cache(self) -> int:
+        """清除所有缓存"""
+        import shutil
+        count = 0
+        if self.cache_dir.exists():
+            for item in self.cache_dir.iterdir():
+                if item.suffix == '.json':
+                    item.unlink()
+                    count += 1
+        return count
+
+    def get_cache_info(self) -> Dict:
+        """获取缓存信息"""
+        if not self.cache_dir.exists():
+            return {"count": 0, "size": 0}
+        
+        count = 0
+        total_size = 0
+        for f in self.cache_dir.glob("*.json"):
+            count += 1
+            total_size += f.stat().st_size
+        
+        return {
+            "count": count,
+            "size": total_size,
+            "size_human": f"{total_size / 1024:.1f} KB",
+            "dir": str(self.cache_dir)
+        }
+
     # ──────────────────────────── LLM大纲生成 ────────────────────────────
     def _generate_outline(self, analysis: Dict) -> Optional[Dict]:
         """
@@ -200,6 +280,12 @@ class VisualNovelGenerator:
             "themes": analysis.get("themes", []),
             "atmosphere": analysis.get("atmosphere", "")
         }
+
+        # 检查缓存
+        cache_key = self._get_cache_key(analysis_summary, prefix="outline")
+        cached = self._load_from_cache(cache_key)
+        if cached:
+            return cached
 
         prompt = self._outline_prompt.format(
             text=json.dumps(analysis_summary, ensure_ascii=False, indent=2)
@@ -235,6 +321,8 @@ class VisualNovelGenerator:
             # 验证大纲结构
             if "logline" in parsed or "structure" in parsed:
                 print(f"  [LLM] OK 大纲生成成功")
+                # 保存到缓存
+                self._save_to_cache(cache_key, parsed, preview=parsed.get("title", ""))
                 return parsed
 
         print(f"  [LLM] 大纲生成失败，使用默认大纲")
@@ -300,6 +388,18 @@ class VisualNovelGenerator:
         # 故事大纲
         outline_text = json.dumps(world.get("outline", {}), ensure_ascii=False) if world.get("outline") else "无"
 
+        # 构建缓存键（基于事件和上下文）
+        cache_data = {
+            "event": event,
+            "prev_event": prev_event,
+            "next_event": next_event,
+            "game_state": game_state
+        }
+        cache_key = self._get_cache_key(cache_data, prefix=f"branch_plan_{event_idx}")
+        cached = self._load_from_cache(cache_key)
+        if cached:
+            return cached
+
         # 填充提示词模板
         prompt = self._branch_planning_prompt.format(
             outline=outline_text,
@@ -343,6 +443,8 @@ class VisualNovelGenerator:
             branch_plans = parsed.get("branch_plans", [])
             if isinstance(branch_plans, list) and len(branch_plans) >= 2:
                 print(f"  [LLM] OK 分支规划完成: {len(branch_plans)} 个方向")
+                # 保存到缓存
+                self._save_to_cache(cache_key, parsed, preview=event.get("title", ""))
                 return parsed
 
         print(f"  [LLM] 分支规划失败")
@@ -415,6 +517,16 @@ class VisualNovelGenerator:
             f"- {r.get('from', '')} -> {r.get('to', '')}（{r.get('type', '')}）：{r.get('description', '')}"
             for r in relevant_rels
         ) if relevant_rels else "无直接关系"
+
+        # 构建缓存键（基于事件和分支规划）
+        cache_data = {
+            "event": event,
+            "branch_plan": branch_plan
+        }
+        cache_key = self._get_cache_key(cache_data, prefix="branch_content")
+        cached = self._load_from_cache(cache_key)
+        if cached:
+            return cached
 
         # 填充提示词模板
         prompt = self._branch_prompt.format(
@@ -527,11 +639,14 @@ class VisualNovelGenerator:
                 chapter_lines.append({"speaker": "narrator", "text": choice_point["inner_thought"]})
 
             print(f"  [LLM] OK 生成了 {len(validated_branches)} 个分支")
-            return {
+            result = {
                 "chapter_lines": chapter_lines,
                 "choice_point": choice_point,
                 "branches": validated_branches[:3],
             }
+            # 保存到缓存
+            self._save_to_cache(cache_key, result, preview=event.get("title", ""))
+            return result
 
         print(f"  [LLM] {max_retries}次尝试均失败，回退到模板模式")
         return None

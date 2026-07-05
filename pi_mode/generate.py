@@ -651,14 +651,53 @@ func make_choice(choice_index: int) -> void:
 
 def main():
     parser = argparse.ArgumentParser(description="Text2Game - 游戏生成器")
-    parser.add_argument("-a", "--analysis", required=True, help="分析结果JSON文件路径")
-    parser.add_argument("-t", "--type", required=True, choices=SUPPORTED_TYPES,
+    parser.add_argument("-a", "--analysis", help="分析结果JSON文件路径")
+    parser.add_argument("-t", "--type", choices=SUPPORTED_TYPES,
                        help="游戏类型")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT_DIR, help=f"输出目录 (默认: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("-n", "--name", help="自定义游戏名称")
     parser.add_argument("--no-llm", action="store_true", help="不使用LLM生成分支剧情（使用模板回退）")
+    parser.add_argument("--cache-info", action="store_true", help="显示VN生成器缓存信息")
+    parser.add_argument("--clear-cache", action="store_true", help="清除VN生成器缓存")
     
     args = parser.parse_args()
+    
+    # 处理缓存管理命令
+    if args.cache_info or args.clear_cache:
+        # 动态导入避免循环依赖
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location(
+            "visual_novel",
+            Path(__file__).parent / "generators" / "visual_novel.py"
+        )
+        if _spec and _spec.loader:
+            _mod = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            VisualNovelGenerator = _mod.VisualNovelGenerator
+        else:
+            VisualNovelGenerator = None
+        
+        if VisualNovelGenerator:
+            vn_gen = VisualNovelGenerator(args.output)
+            
+            if args.cache_info:
+                info = vn_gen.get_cache_info()
+                print(f"VN生成器缓存信息:")
+                print(f"  文件数: {info['count']}")
+                print(f"  大小: {info['size_human']}")
+                print(f"  目录: {info['dir']}")
+            
+            if args.clear_cache:
+                count = vn_gen.clear_cache()
+                print(f"已清除 {count} 个缓存文件")
+        else:
+            print("无法加载VisualNovelGenerator")
+        
+        return
+    
+    # 检查必需参数
+    if not args.analysis or not args.type:
+        parser.error("生成游戏需要 -a/--analysis 和 -t/--type 参数")
     
     # 创建生成器
     generator = GameGenerator(args.output)
