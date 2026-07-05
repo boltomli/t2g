@@ -447,9 +447,9 @@ def test_cache_system():
         data1 = {"event": "事件1"}
         data2 = {"event": "事件2"}
         
-        key1 = gen._get_cache_key(data1, prefix="test")
-        key2 = gen._get_cache_key(data2, prefix="test")
-        key1_again = gen._get_cache_key(data1, prefix="test")
+        key1 = gen.cache.get_cache_key(data1, prefix="test")
+        key2 = gen.cache.get_cache_key(data2, prefix="test")
+        key1_again = gen.cache.get_cache_key(data1, prefix="test")
         
         assert key1 != key2, "不同数据应有不同的缓存键"
         assert key1 == key1_again, "相同数据应有相同的缓存键"
@@ -457,20 +457,20 @@ def test_cache_system():
         
         # 测试缓存保存和加载
         test_result = {"chapter_summary": "测试章节", "branches": []}
-        gen._save_to_cache(key1, test_result, preview="测试预览")
-        loaded = gen._load_from_cache(key1)
+        gen.cache.save_to_cache(key1, test_result, preview="测试预览")
+        loaded = gen.cache.load_from_cache(key1)
         
         assert loaded is not None, "缓存加载失败"
         assert loaded.get("chapter_summary") == "测试章节", "缓存内容不匹配"
         print("  [OK] 缓存保存/加载正确")
         
         # 测试缓存信息
-        info = gen.get_cache_info()
+        info = gen.cache.get_cache_info()
         assert info["count"] > 0, "缓存文件数应大于0"
         print(f"  [OK] 缓存信息: {info['count']}个文件")
         
         # 清理测试缓存
-        count = gen.clear_cache()
+        count = gen.cache.clear_cache()
         assert count > 0, "应清除至少1个缓存文件"
         print(f"  [OK] 清除了 {count} 个缓存文件")
         

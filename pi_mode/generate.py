@@ -666,6 +666,20 @@ def main():
     if args.cache_info or args.clear_cache:
         # 动态导入避免循环依赖
         import importlib.util
+        
+        # 先导入 base 模块
+        base_spec = importlib.util.spec_from_file_location(
+            "base",
+            Path(__file__).parent / "generators" / "base.py"
+        )
+        if base_spec and base_spec.loader:
+            base_mod = importlib.util.module_from_spec(base_spec)
+            base_spec.loader.exec_module(base_mod)
+            # 注册到 sys.modules 以便子模块导入
+            import sys
+            sys.modules["pi_mode.generators.base"] = base_mod
+            sys.modules["generators.base"] = base_mod
+        
         _spec = importlib.util.spec_from_file_location(
             "visual_novel",
             Path(__file__).parent / "generators" / "visual_novel.py"
@@ -677,21 +691,37 @@ def main():
         else:
             VisualNovelGenerator = None
         
-        if VisualNovelGenerator:
-            vn_gen = VisualNovelGenerator(args.output)
-            
-            if args.cache_info:
-                info = vn_gen.get_cache_info()
-                print(f"VN生成器缓存信息:")
-                print(f"  文件数: {info['count']}")
-                print(f"  大小: {info['size_human']}")
-                print(f"  目录: {info['dir']}")
-            
-            if args.clear_cache:
-                count = vn_gen.clear_cache()
-                print(f"已清除 {count} 个缓存文件")
+        _spec2 = importlib.util.spec_from_file_location(
+            "twine",
+            Path(__file__).parent / "generators" / "twine.py"
+        )
+        if _spec2 and _spec2.loader:
+            _mod2 = importlib.util.module_from_spec(_spec2)
+            _spec2.loader.exec_module(_mod2)
+            TwineGenerator = _mod2.TwineGenerator
         else:
-            print("无法加载VisualNovelGenerator")
+            TwineGenerator = None
+        
+        generators = []
+        if VisualNovelGenerator:
+            generators.append(("VN", VisualNovelGenerator(args.output)))
+        if TwineGenerator:
+            generators.append(("Twine", TwineGenerator(args.output)))
+        
+        if args.cache_info:
+            print("缓存信息:")
+            for name, gen in generators:
+                info = gen.cache.get_cache_info()
+                print(f"  {name}: {info['count']}个文件, {info['size_human']}")
+                print(f"    目录: {info['dir']}")
+        
+        if args.clear_cache:
+            total = 0
+            for name, gen in generators:
+                count = gen.cache.clear_cache()
+                total += count
+                print(f"  {name}: 清除 {count} 个缓存文件")
+            print(f"共清除 {total} 个缓存文件")
         
         return
     

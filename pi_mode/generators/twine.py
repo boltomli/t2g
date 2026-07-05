@@ -11,98 +11,21 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-# 尝试加载 dotenv
-try:
-    from dotenv import load_dotenv
-    env_path = Path(__file__).parent.parent.parent / '.env'
-    load_dotenv(env_path)
-except ImportError:
-    pass
-except Exception:
-    pass
+# 导入共享基础模块
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from base import BaseGenerator, LLMClient, CacheManager
 
 
-class _LLMClient:
-    """轻量 LLM 客户端"""
-
-    def __init__(self):
-        self.api_url = os.getenv("LLM_API_URL", "http://localhost:1234/v1").rstrip("/")
-        self.model = os.getenv("LLM_MODEL", "google/gemma-4-12b-qat")
-        self.api_key = os.getenv("LLM_API_KEY", "")
-        self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.8"))
-        self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "16384"))
-        self.timeout = int(os.getenv("LLM_TIMEOUT", "600"))
-        self.max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))
-        self.enable_reasoning = os.getenv("ENABLE_REASONING", "false").lower() == "true"
-        self._available: Optional[bool] = None
-
-    def chat_completion(self, messages: List[Dict]) -> Optional[Dict]:
-        try:
-            import requests
-        except ImportError:
-            return None
-
-        url = f"{self.api_url}/chat/completions"
-        body = {
-            "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "stream": False,
-            "reasoning": {"enabled": self.enable_reasoning},
-        }
-        if self.model:
-            body["model"] = self.model
-
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-
-        proxies = {"http": None, "https": None}
-
-        for attempt in range(self.max_retries):
-            try:
-                resp = requests.post(url, json=body, headers=headers,
-                                     timeout=self.timeout, proxies=proxies)
-                if resp.status_code == 200:
-                    return resp.json()
-                elif resp.status_code in (429, 500, 502, 503):
-                    time.sleep(3 * (attempt + 1))
-                    continue
-                else:
-                    print(f"  [LLM] HTTP {resp.status_code}: {resp.text[:200]}")
-                    return None
-            except Exception as e:
-                if attempt < self.max_retries - 1:
-                    print(f"  [LLM] 重试 {attempt+1}/{self.max_retries}: {e}")
-                    time.sleep(2 * (attempt + 1))
-                else:
-                    return None
-        return None
-
-    def check_available(self) -> bool:
-        if self._available is not None:
-            return self._available
-        try:
-            import requests
-            url = f"{self.api_url}/models"
-            headers = {}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-            proxies = {"http": None, "https": None}
-            resp = requests.get(url, headers=headers, timeout=5, proxies=proxies)
-            self._available = resp.status_code == 200
-        except Exception:
-            self._available = False
-        return self._available
-
-
-class TwineGenerator:
+class TwineGenerator(BaseGenerator):
     """Twine/Chapbook 故事生成器"""
 
+    # 缓存子目录
+    CACHE_SUBDIR = "twine"
+
     def __init__(self, output_dir: str = "./generated_games"):
-        self.output_dir = Path(output_dir)
-        self.llm: Optional[_LLMClient] = None
-        self.prompts_dir = Path(__file__).parent.parent.parent / "prompts"
+        super().__init__(output_dir)
 
     # ──────────────────────── 主入口 ────────────────────────
     def generate(self, analysis_file: str, output_name: Optional[str] = None,
@@ -114,7 +37,7 @@ class TwineGenerator:
         print(f"[Twine] 生成 Twine 故事: {game_name}")
 
         # 初始化 LLM
-        self.llm = _LLMClient()
+        self.llm = LLMClient()
         llm_ok = use_llm and self.llm.check_available()
         if llm_ok:
             print(f"[Twine] LLM 可用 ({self.llm.api_url})，将使用 LLM 生成分支对话")
@@ -155,25 +78,6 @@ class TwineGenerator:
         print(f"[Twine] OK 生成完成: {project_path}")
         print(f"[Twine] 编译方法见 README 说明")
         return str(project_path)
-
-    # ──────────────────────── 数据加载 ────────────────────────
-    def _load_analysis(self, path: str) -> Dict:
-        p = Path(path)
-        if not p.exists():
-            raise FileNotFoundError(f"分析文件不存在: {path}")
-        return json.loads(p.read_text(encoding="utf-8"))
-
-    def _derive_name(self, analysis: Dict, analysis_file: str = "") -> str:
-        if analysis_file:
-            src = analysis.get("source_file", analysis_file)
-            stem = Path(src).stem
-            name = "".join(c for c in stem if c.isalnum() or c in "_- ")
-            if name:
-                return name + "_twine"
-        data = analysis.get("analysis", analysis)
-        name = data.get("world", {}).get("name", "TwineStory")
-        name = "".join(c for c in name if c.isalnum() or c in "_- ")
-        return (name or "TwineStory") + "_twine"
 
     # ──────────────────────── 角色构建 ────────────────────────
     def _build_characters(self, analysis: Dict) -> Dict:
