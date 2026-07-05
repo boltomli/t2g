@@ -1,136 +1,131 @@
-# Text2Game 快速入门指南
+# Text2Game 快速开始
 
-## 📋 前提条件
+## 前提条件
 
-1. **Godot 4.7** - 已安装 ✓
-2. **LM Studio** - 需要启动并加载模型
-3. **Python 3.x** - 用于Pi Agent模式
+- **LM Studio** — 启动并加载模型（推荐 `google/gemma-4-12b-qat`），开启本地服务器（默认端口 1234）
+- **Python 3.10+** — 通过 [uv](https://github.com/astral-sh/uv) 管理
+- **Godot 4.7**（可选，仅 Godot 游戏类型需要）
 
-## 🚀 方式1: Godot应用模式（推荐）
-
-### 步骤1: 启动LM Studio
-1. 打开LM Studio
-2. 加载一个模型（推荐: qwen/qwen3.5-9b）
-3. 启动本地服务器（默认端口1234）
-
-### 步骤2: 启动Text2Game
 ```bash
-# 方法A: 双击运行launch.bat
-launch.bat
-
-# 方法B: 直接使用Godot
-godot --path godot_project/
+uv sync
 ```
 
-### 步骤3: 使用应用
-1. 在文本框输入或粘贴文本
-2. 点击"分析文本"按钮
-3. 等待LLM分析完成
-4. 查看分析结果（世界观、角色、主题）
-5. 点击"下一步"选择游戏类型
-6. 选择喜欢的游戏类型
-7. 等待游戏生成完成
-8. 使用Godot打开生成的项目
+---
 
-## 🐍 方式2: Pi Agent模式
+## 方式 1：Web 界面（推荐）
 
-### 步骤1: 分析文本
+启动内置 Web 服务器，浏览器中完成分析和生成。
+
+```bash
+uv run python web_server.py
+# 打开 http://localhost:8080
+```
+
+### 操作步骤
+
+1. **输入文本** — 左侧文本框粘贴内容，或点击「上传 .txt 文件」/「加载示例」
+2. **分析文本** — 点击「分析文本」，等待 LLM 分析完成
+3. **查看结果** — 左侧面板展示世界观、角色、主题等分析结果
+4. **生成游戏** — 点击「生成互动故事」，右侧 iframe 自动加载并运行生成的 Twine 游戏
+
+支持实时进度显示（SSE 推送），分析和生成过程中可查看进度条。
+
+---
+
+## 方式 2：CLI 脚本
+
+### 分析文本
+
 ```bash
 # 分析示例文本
-python pi_mode/analyze.py examples/fantasy.txt
+uv run python pi_mode/analyze.py examples/fantasy.txt
 
 # 分析自定义文本
-python pi_mode/analyze.py your_text.txt -o analysis.json
+uv run python pi_mode/analyze.py your_text.txt -o analysis.json
+
+# 查看缓存信息
+uv run python pi_mode/analyze.py --cache-info
 ```
 
-### 步骤2: 生成游戏
+### 生成游戏
+
 ```bash
-# 使用RPG类型生成
-python pi_mode/generate.py -a examples/fantasy.json -t rpg
+# 生成 Twine 故事
+uv run python pi_mode/generate.py -a <analysis.json> -t twine
 
-# 使用冒险类型生成
-python pi_mode/generate.py -a examples/fantasy.json -t adventure
+# 生成 Godot 游戏
+uv run python pi_mode/generate.py -a <analysis.json> -t rpg
+uv run python pi_mode/generate.py -a <analysis.json> -t adventure
+uv run python pi_mode/generate.py -a <analysis.json> -t visual_novel
 ```
 
-### 步骤3: 运行游戏
+### 编译 Twine → HTML
+
 ```bash
-# 使用Godot打开生成的项目
-godot --path generated_games/Fantasy_rpg/
+# 编译单个 .twee
+uv run python pi_mode/compile_twee.py story.twee
+
+# 编译目录下所有 .twee
+uv run python pi_mode/compile_twee.py generated_games/my_story_twine/
+
+# 指定输出路径
+uv run python pi_mode/compile_twee.py story.twee -o output.html
 ```
 
-## 📝 示例文本
+### 优化分析结果
 
-项目提供了3个示例文本:
+对已有分析结果定向优化，无需重新分析原文：
 
-### 1. 奇幻冒险 (examples/fantasy.txt)
-- 世界观: 魔法消失的古老王国
-- 主角: 拥有幻视能力的少女艾莉娅
-- 主题: 命运、勇气、牺牲
-- 推荐: RPG、冒险、视觉小说
-
-### 2. 科幻故事 (examples/scifi.txt)
-- 世界观: 2187年太空城，阶层分化
-- 主角: 底层机械师凯尔
-- 主题: 真相、选择、反抗
-- 推荐: 冒险、策略、动作
-
-### 3. 悬疑推理 (examples/mystery.txt)
-- 世界观: 暴风雨中的古堡
-- 主角: 侦探陈默
-- 主题: 真相、信任、秘密
-- 推荐: 冒险、解谜、视觉小说
-
-## 🎮 支持的游戏类型
-
-| 类型 | 说明 | 适用场景 |
-|------|------|----------|
-| RPG | 角色扮演 | 角色成长、技能树、装备收集 |
-| Adventure | 冒险解谜 | 探索、解谜、物品收集 |
-| Visual Novel | 视觉小说 | 分支剧情、多结局、角色好感度 |
-| Strategy | 策略模拟 | 资源管理、决策、建设 |
-| Action | 动作平台 | 战斗、挑战、操作 |
-
-## 🔧 常见问题
-
-### Q: 连接LLM失败怎么办？
-A: 确保LM Studio已启动，模型已加载，服务器运行在端口1234。
-
-### Q: 分析超时怎么办？
-A: 尝试缩短文本长度，或在LM Studio中使用更快的模型。
-
-### Q: 生成的游戏无法运行？
-A: 确保使用Godot 4.7打开生成的项目文件夹。
-
-### Q: 如何自定义游戏？
-A: 生成的游戏是完整的Godot项目，可以自由修改代码和资源。
-
-## 📁 项目结构
-
-```
-text2game/
-├── godot_project/           # Godot 4.7项目
-│   ├── project.godot
-│   ├── scenes/main.tscn    # 主界面场景
-│   └── scripts/             # 核心脚本
-│       ├── main.gd         # 主控制器
-│       ├── llm_client.gd   # LLM客户端
-│       ├── text_analyzer.gd # 文本分析器
-│       └── game_generator.gd # 游戏生成器
-├── pi_mode/                 # Pi Agent模式
-│   ├── analyze.py          # 文本分析脚本
-│   └── generate.py         # 游戏生成脚本
-├── examples/                # 示例文本
-└── generated_games/         # 生成的游戏（自动创建）
+```bash
+uv run python pi_mode/optimize.py -a result.json -r "增加角色的背景故事深度"
+uv run python pi_mode/optimize.py -a result.json -f my_requirements.txt
+uv run python pi_mode/optimize.py -a result.json -r "重新梳理事件时间线" -o optimized.json
 ```
 
-## 🎯 下一步
+---
 
-1. 尝试不同的示例文本
-2. 探索生成的游戏代码
-3. 自定义游戏内容和机制
-4. 添加更多游戏类型模板
+## 方式 3：Godot 应用
 
-## 📚 相关文档
+```bash
+# 启动 Godot 编辑器
+godot -e godot_project/
 
-- [架构设计](ARCHITECTURE.md) - 详细的系统架构说明
-- [Pi Agent模式说明](pi_mode/README.md) - Pi模式详细使用方法
+# 或双击 launch.bat（Windows）
+```
+
+### 操作步骤
+
+1. 在文本框输入或粘贴文本
+2. 点击「分析文本」
+3. 等待 LLM 分析完成，查看世界观、角色、主题
+4. 点击「下一步」选择游戏类型
+5. 等待游戏生成完成
+6. 使用 Godot 打开生成的项目
+
+---
+
+## 示例文本
+
+项目提供 3 个示例文本：
+
+| 文件 | 世界观 | 主角 | 主题 | 推荐类型 |
+|------|--------|------|------|----------|
+| `examples/fantasy.txt` | 魔法消失的古老王国 | 幻视少女艾莉娅 | 命运、勇气、牺牲 | RPG、冒险、视觉小说 |
+| `examples/scifi.txt` | 2187年太空城 | 底层机械师凯尔 | 真相、选择、反抗 | 冒险、策略、动作 |
+| `examples/mystery.txt` | 暴风雨中的古堡 | 侦探陈默 | 真相、信任、秘密 | 冒险、解谜、视觉小说 |
+
+---
+
+## 常见问题
+
+**Q: 连接 LLM 失败？**
+检查 LM Studio 是否运行，模型是否加载，服务器是否在端口 1234。
+
+**Q: 分析超时？**
+增加 `.env` 中的 `LLM_TIMEOUT`，或缩短文本长度。
+
+**Q: Reasoning tokens 占用？**
+gemma 模型即使关闭 reasoning 仍会生成 tokens，需增加 `LLM_MAX_TOKENS`（建议 16384+）。
+
+**Q: Twine 游戏无法运行？**
+编译后的 HTML 双击即可在浏览器运行，无需额外依赖。

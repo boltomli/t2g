@@ -13,21 +13,28 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 # 导入子生成器
-try:
-    from generators.visual_novel import VisualNovelGenerator
-except ImportError:
-    # 相对导入失败时尝试直接导入
-    import importlib.util
-    _spec = importlib.util.spec_from_file_location(
-        "visual_novel",
-        Path(__file__).parent / "generators" / "visual_novel.py"
-    )
-    if _spec and _spec.loader:
-        _mod = importlib.util.module_from_spec(_spec)
-        _spec.loader.exec_module(_mod)
-        VisualNovelGenerator = _mod.VisualNovelGenerator
-    else:
-        VisualNovelGenerator = None
+def _load_generator(module_name: str, class_name: str):
+    """动态加载生成器模块"""
+    try:
+        mod = __import__(f"generators.{module_name}", fromlist=[class_name])
+        return getattr(mod, class_name)
+    except ImportError:
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location(
+            module_name,
+            Path(__file__).parent / "generators" / f"{module_name}.py"
+        )
+        if _spec and _spec.loader:
+            _mod = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            return getattr(_mod, class_name, None)
+    return None
+
+VisualNovelGenerator = _load_generator("visual_novel", "VisualNovelGenerator")
+TwineGenerator = _load_generator("twine", "TwineGenerator")
+
+# 支持的游戏类型
+SUPPORTED_TYPES = ["rpg", "adventure", "visual_novel", "strategy", "action", "twine"]
 
 # 默认配置
 DEFAULT_OUTPUT_DIR = "./generated_games"
@@ -41,6 +48,12 @@ class GameGenerator:
     
     def generate_game(self, analysis_file: str, game_type: str, game_config: Optional[Dict] = None, use_llm: bool = True) -> str:
         """生成游戏"""
+        # Twine 类型使用专用生成器
+        if game_type == "twine" and TwineGenerator is not None:
+            print("使用 Twine/Chapbook 故事生成器...")
+            generator = TwineGenerator(str(self.output_dir))
+            return generator.generate(analysis_file, use_llm=use_llm)
+        
         # 视觉小说类型使用专用生成器
         if game_type == "visual_novel" and VisualNovelGenerator is not None:
             print("使用视觉小说专用生成器...")
@@ -639,7 +652,7 @@ func make_choice(choice_index: int) -> void:
 def main():
     parser = argparse.ArgumentParser(description="Text2Game - 游戏生成器")
     parser.add_argument("-a", "--analysis", required=True, help="分析结果JSON文件路径")
-    parser.add_argument("-t", "--type", required=True, choices=["rpg", "adventure", "visual_novel", "strategy", "action"],
+    parser.add_argument("-t", "--type", required=True, choices=SUPPORTED_TYPES,
                        help="游戏类型")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT_DIR, help=f"输出目录 (默认: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("-n", "--name", help="自定义游戏名称")

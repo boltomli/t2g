@@ -1,5 +1,19 @@
 # 更新日志
 
+## 2026-06-30 Web界面
+
+### 新增
+
+- **Web界面**: 新增 `web_server.py` + `web/index.html`，支持在浏览器中上传文本、分析、生成Twine游戏并实时预览
+  - 启动方式: `uv run python web_server.py`，访问 http://localhost:8080
+  - 支持粘贴文本、上传.txt文件、加载内置示例
+  - SSE实时进度推送
+  - 右侧iframe直接运行生成的互动故事
+
+### 修复
+
+- **Twine开场跳过**: 修复 `twine.py` 中 `story.initialPassage` 硬编码为 `'Chapter_01'` 导致首次进入游戏跳过序章的问题，改为 `'Start'`
+
 ## 2026-06-20 最新更新
 
 ### 模型配置
