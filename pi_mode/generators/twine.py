@@ -26,6 +26,7 @@ class TwineGenerator(BaseGenerator):
 
     def __init__(self, output_dir: str = "./generated_games"):
         super().__init__(output_dir)
+        self._branch_prompt: Optional[str] = None
 
     # ──────────────────────── 主入口 ────────────────────────
     def generate(self, analysis_file: str, output_name: Optional[str] = None,
@@ -41,6 +42,7 @@ class TwineGenerator(BaseGenerator):
         llm_ok = use_llm and self.llm.check_available()
         if llm_ok:
             print(f"[Twine] LLM 可用 ({self.llm.api_url})，将使用 LLM 生成分支对话")
+            self._branch_prompt = self._load_prompt("twine_branches.txt")
         else:
             print(f"[Twine] LLM 不可用，使用模板生成（回退模式）")
 
@@ -346,6 +348,79 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
         event_chars = event.get("characters", [])
         consequences = event.get("consequences", "")
 
+        # 尝试使用 LLM 生成分支内容
+        llm_result = None
+        if use_llm and self.llm and self.llm.check_available() and self._branch_prompt:
+            llm_result = self._generate_branches_with_llm(
+                event, event_idx, all_events, world, characters,
+                conflicts, relationships, prev_event, next_event
+            )
+
+        if llm_result:
+            # 使用 LLM 生成的内容
+            return self._build_chapter_from_llm(llm_result, order, event_chars)
+        
+        # 回退到模板生成
+        return self._build_chapter_from_template(
+            event, event_idx, all_events, world, characters,
+            conflicts, relationships, themes, atmosphere
+        )
+
+    def _build_chapter_from_llm(self, llm_result: Dict, order: int,
+                                event_chars: List[str]) -> Dict:
+        """使用 LLM 结果构建章节"""
+        lines = []
+        
+        # 章节标题
+        title = llm_result.get("title", f"第{order}章")
+        lines.append(f"## {title}")
+        lines.append("")
+        
+        # 叙事内容
+        narrative = llm_result.get("narrative", "")
+        if narrative:
+            lines.append(narrative)
+            lines.append("")
+        
+        # 选择
+        choices = llm_result.get("choices", [])
+        if choices:
+            lines.append("---")
+            lines.append("")
+            for choice in choices:
+                target = choice.get("target", f"Chapter_{order + 1:02d}")
+                text = choice.get("text", "继续")
+                lines.append(f"> [[{text}->{target}]]")
+            # 变量设置
+            lines.append("")
+            for choice in choices:
+                flag = choice.get("flag", "")
+                if flag:
+                    lines.append(f"[if {flag}]story.state.set('{flag}', true)[/]")
+        else:
+            # 无选择
+            lines.append("---")
+            lines.append("")
+            lines.append(f"[[继续->Chapter_{order + 1:02d}]]")
+        
+        return {
+            "name": f"Chapter_{order:02d}",
+            "tags": ["chapter", "llm"],
+            "source": "\n".join(lines),
+        }
+
+    def _build_chapter_from_template(self, event: Dict, event_idx: int,
+                                     all_events: List[Dict], world: Dict,
+                                     characters: Dict, conflicts: List[Dict],
+                                     relationships: List[Dict], themes: List[str],
+                                     atmosphere: str) -> Dict:
+        """使用模板构建章节（回退模式）"""
+        order = event.get("order", event_idx + 1)
+        title = event.get("title", f"第{order}章")
+        desc = event.get("description", "")
+        event_chars = event.get("characters", [])
+        consequences = event.get("consequences", "")
+
         lines = []
         lines.append(f"## {title}")
         lines.append("")
@@ -375,7 +450,7 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
             lines.append(f"*{consequences}*")
             lines.append("")
 
-        # 生成选择（Fork）
+        # 生成选择（模板）
         choices = self._generate_choices(
             event, event_idx, all_events, conflicts,
             relationships, characters, world
@@ -388,14 +463,12 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
                 target = choice.get("target", self._next_chapter_id(order, all_events))
                 text = choice.get("text", "继续")
                 lines.append(f"> [[{text}->{target}]]")
-            # 变量设置（flag）
             lines.append("")
             for choice in choices:
                 flag = choice.get("flag", "")
                 if flag:
                     lines.append(f"[if {flag}]story.state.set('{flag}', true)[/]")
         else:
-            # 无选择 → 直接继续
             next_id = self._next_chapter_id(order, all_events)
             lines.append("---")
             lines.append("")
@@ -406,6 +479,106 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
             "tags": ["chapter"],
             "source": "\n".join(lines),
         }
+
+    def _generate_branches_with_llm(self, event: Dict, event_idx: int,
+                                     all_events: List[Dict], world: Dict,
+                                     characters: Dict, conflicts: List[Dict],
+                                     relationships: List[Dict],
+                                     prev_event: Optional[Dict],
+                                     next_event: Optional[Dict]) -> Optional[Dict]:
+        """
+        调用LLM为单个事件生成分支选择。
+        """
+        if not self.llm or not self.llm.check_available() or not self._branch_prompt:
+            return None
+
+        # 构建角色信息摘要
+        event_chars = event.get("characters", [])
+        chars_info = []
+        for name in event_chars:
+            char_data = characters.get(name)
+            if char_data:
+                traits = ", ".join(char_data.get("traits", []))
+                goal = char_data.get("goal", "")
+                chars_info.append(f"- {name}（{char_data.get('role', '')}）：特征[{traits}]，目标：{goal}")
+        chars_text = "\n".join(chars_info) if chars_info else "无特定角色"
+
+        # 冲突信息
+        conflicts_text = "\n".join(
+            f"- {c.get('type', '')}：{c.get('description', '')}" for c in conflicts
+        ) if conflicts else "无明确冲突"
+
+        # 关系信息
+        relevant_rels = [
+            r for r in relationships
+            if r.get("from") in event_chars or r.get("to") in event_chars
+        ]
+        rels_text = "\n".join(
+            f"- {r.get('from', '')} -> {r.get('to', '')}（{r.get('type', '')}）：{r.get('description', '')}"
+            for r in relevant_rels
+        ) if relevant_rels else "无直接关系"
+
+        prev_text = f"标题：{prev_event.get('title', '')}，描述：{prev_event.get('description', '')[:100]}" if prev_event else "无（这是第一个事件）"
+        next_text = f"标题：{next_event.get('title', '')}，描述：{next_event.get('description', '')[:100]}" if next_event else "无（这是最后一个事件）"
+
+        # 检查缓存
+        cache_data = {
+            "event": event,
+            "prev_event": prev_event,
+            "next_event": next_event
+        }
+        cache_key = self.cache.get_cache_key(cache_data, prefix=f"twine_branch_{event_idx}")
+        cached = self.cache.load_from_cache(cache_key)
+        if cached:
+            return cached
+
+        # 填充提示词模板
+        prompt = self._branch_prompt.format(
+            event=json.dumps(event, ensure_ascii=False, indent=2),
+            characters_info=chars_text,
+            conflicts=conflicts_text,
+            relationships=rels_text,
+            prev_event=prev_text,
+            next_event=next_text,
+        )
+
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": f"请为事件「{event.get('title', '')}」生成互动故事的分支选择。"}
+        ]
+
+        print(f"  [LLM] 生成分支: {event.get('title', f'event_{event_idx}')}")
+
+        max_retries = self.llm.max_retries if self.llm else 3
+        for attempt in range(max_retries):
+            if attempt > 0:
+                time.sleep(2 * attempt)
+
+            try:
+                response = self.llm.chat_completion(messages)
+            except Exception as e:
+                print(f"  [LLM] 请求异常: {e}")
+                continue
+
+            if not response or not response.get("choices"):
+                continue
+
+            content = response["choices"][0]["message"]["content"]
+            parsed = self._parse_llm_json(content)
+
+            if not parsed or not isinstance(parsed, dict):
+                continue
+
+            # 验证结构
+            choices = parsed.get("choices", [])
+            if isinstance(choices, list) and len(choices) >= 2:
+                print(f"  [LLM] OK 生成了 {len(choices)} 个选择")
+                # 保存到缓存
+                self.cache.save_to_cache(cache_key, parsed, preview=event.get("title", ""))
+                return parsed
+
+        print(f"  [LLM] {max_retries}次尝试均失败，回退到模板模式")
+        return None
 
     def _next_chapter_id(self, current_order: int, all_events: List[Dict]) -> str:
         """获取下一个章节 ID"""
