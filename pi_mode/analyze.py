@@ -30,6 +30,8 @@ except ImportError:
         def warning(msg): print(f"[WARN] {msg}")
         @staticmethod
         def error(msg): print(f"[ERROR] {msg}")
+        @staticmethod
+        def debug(msg): pass  # 静默debug输出
     class tqdm:
         def __init__(self, iterable=None, total=None, desc="", **kwargs):
             self.iterable = iterable
@@ -43,6 +45,8 @@ except ImportError:
         def update(self, n=1): self.current += n
         def set_postfix_str(self, s): pass
         def set_description(self, s): self.desc = s
+        @staticmethod
+        def write(msg): print(msg)  # tqdm.write兼容
 
 # 尝试加载 dotenv
 try:
@@ -565,7 +569,7 @@ class TextAnalyzer:
                 chunk_analysis = self._load_from_cache(chunk, prefix="chunk", original_input=text)
                 if chunk_analysis:
                     cache_hits += 1
-                    tqdm.write(f"  ✓ 块 {i + 1} 命中缓存")
+                    tqdm.write(f"  [OK] 块 {i + 1} 命中缓存")
             
             if chunk_analysis is None:
                 chunk_analysis = self._analyze_chunk(chunk)
@@ -577,12 +581,12 @@ class TextAnalyzer:
             # 检查是否成功
             if chunk_analysis and not chunk_analysis.get("_error"):
                 all_analyses.append(chunk_analysis)
-                tqdm.write(f"  ✓ 块 {i + 1} 完成")
+                tqdm.write(f"  [OK] 块 {i + 1} 完成")
             elif chunk_analysis and chunk_analysis.get("_error"):
-                tqdm.write(f"  ✗ 块 {i + 1} 失败: {chunk_analysis['_error']}")
+                tqdm.write(f"  [FAIL] 块 {i + 1} 失败: {chunk_analysis['_error']}")
                 skipped += 1
             else:
-                tqdm.write(f"  ✗ 块 {i + 1} 失败，跳过")
+                tqdm.write(f"  [FAIL] 块 {i + 1} 失败，跳过")
                 skipped += 1
             
             # 保存进度
@@ -784,7 +788,7 @@ class TextAnalyzer:
             char_cache_key = self._get_cache_key(json.dumps(char, sort_keys=True), prefix=f"char_{char_name}")
             char_cached = self._load_from_cache_by_key(chars_dir, char_cache_key)
             if char_cached:
-                tqdm.write(f"  ✓ {char_name} 命中缓存")
+                tqdm.write(f"  [OK] {char_name} 命中缓存")
                 final_chars.append(char_cached)
                 continue
             
@@ -795,7 +799,7 @@ class TextAnalyzer:
                 final_chars.append(result)
                 # 保存单个角色缓存
                 self._save_to_cache_by_key(chars_dir, char_cache_key, result)
-                tqdm.write(f"  ✓ {char_name} 整理完成")
+                tqdm.write(f"  [OK] {char_name} 整理完成")
             else:
                 final_chars.append(char)
                 tqdm.write(f"  ⚠ {char_name} 使用原始数据")
@@ -1355,12 +1359,12 @@ def analyze_file(file_path: str, api_url: Optional[str] = None, model: Optional[
     # 分析文本
     print("\n正在分析文本...")
     analysis = analyzer.analyze_text(text, use_cache=use_cache)
-    print("✓ 文本分析完成")
+    print("[OK] 文本分析完成")
     
     # 推荐游戏类型
     print("\n正在推荐游戏类型...")
     game_types = analyzer.recommend_game_types(analysis)
-    print(f"✓ 推荐了 {len(game_types)} 种游戏类型")
+    print(f"[OK] 推荐了 {len(game_types)} 种游戏类型")
     
     # 组合结果
     result = {
@@ -1383,7 +1387,7 @@ def analyze_file(file_path: str, api_url: Optional[str] = None, model: Optional[
         output_path = path.with_suffix(".json")
     
     output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n✓ 分析结果已保存到: {output_path}")
+    print(f"\n[OK] 分析结果已保存到: {output_path}")
     
     return result
 
@@ -1483,7 +1487,7 @@ def main():
         
         output_path = Path(args.output) if args.output else Path(args.input).with_suffix(".json")
         output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"✓ 模拟分析结果已保存到: {output_path}")
+        print(f"[OK] 模拟分析结果已保存到: {output_path}")
         return
     
     # 分析文件
@@ -1515,14 +1519,14 @@ def main():
         if "characters" in analysis:
             print(f"\n角色 ({len(analysis['characters'])}个):")
             for char in analysis["characters"][:3]:
-                print(f"  • {char.get('name', '未知')} - {char.get('role', '未知')}")
+                print(f"  - {char.get('name', '未知')} - {char.get('role', '未知')}")
         
         if "themes" in analysis:
             print(f"\n主题: {', '.join(analysis['themes'])}")
         
         print(f"\n推荐游戏类型:")
         for game_type in result["recommended_types"]:
-            print(f"  • {game_type.get('name', '未知')} ({game_type.get('type', '未知')})")
+            print(f"  - {game_type.get('name', '未知')} ({game_type.get('type', '未知')})")
         
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)

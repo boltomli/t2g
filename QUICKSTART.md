@@ -59,6 +59,14 @@ uv run python pi_mode/generate.py -a <analysis.json> -t adventure
 uv run python pi_mode/generate.py -a <analysis.json> -t visual_novel
 ```
 
+**视觉小说生成流程（三阶段）：**
+
+1. **故事大纲生成** — LLM先生成高层大纲（三幕结构、分支点、结局变体）
+2. **分支方向规划** — 为每个事件规划2-3个不同的剧情走向
+3. **具体对话生成** — 基于规划生成实际的对话和旁白
+
+这样确保分支之间的差异性和整体故事的一致性。
+
 ### 编译 Twine → HTML
 
 ```bash
