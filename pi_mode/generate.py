@@ -742,8 +742,27 @@ def main():
             if new_path.exists():
                 shutil.rmtree(new_path)
             os.rename(project_path, new_path)
+            project_path = str(new_path)
             print(f"\n游戏已重命名为: {args.name}")
         
+        # Twine 类型自动编译为 HTML
+        if args.type == "twine":
+            project_dir = Path(project_path)
+            twee_files = list(project_dir.glob("*.twee"))
+            if twee_files:
+                print(f"\n正在编译 Twine 故事...")
+                try:
+                    from compile_twee import compile_twee
+                    for twee_file in twee_files:
+                        html_path = twee_file.with_suffix(".html")
+                        compile_twee(twee_file, html_path)
+                        print(f"[OK] 编译完成: {html_path}")
+                except ImportError:
+                    print("[WARN] 无法导入 compile_twee，请手动编译")
+                    print(f"  命令: uv run python pi_mode/compile_twee.py {project_path}")
+                except Exception as e:
+                    print(f"[WARN] 编译失败: {e}")
+    
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)
         sys.exit(1)
