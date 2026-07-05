@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北平</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Georgia', serif;
+  font-size: 18px;
+  line-height: 1.8;
+}
+#page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+.passage h2 {
+  color: #e8d4b4;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+  margin: 1.5rem 0 0.8rem;
+}
+.passage h3 { color: #e8d4b4; margin: 1rem 0 0.5rem; }
+.passage p { margin: 0.6rem 0; }
+.passage a {
+  color: #b4d4e8;
+  text-decoration: none;
+  border-bottom: 1px dotted #b4d4e8;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.passage a:hover {
+  color: #e8b4b8;
+  border-bottom-color: #e8b4b8;
+}
+.passage hr {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 2rem 0;
+}
+.passage .fork {
+  margin: 0.5rem 0;
+}
+.passage .fork a {
+  display: block;
+  padding: 0.8rem 1.2rem;
+  background: rgba(180, 212, 232, 0.08);
+  border: 1px solid rgba(180, 212, 232, 0.2);
+  border-radius: 6px;
+  border-bottom: 1px solid rgba(180, 212, 232, 0.2);
+  transition: all 0.25s;
+}
+.passage .fork a:hover {
+  background: rgba(180, 212, 232, 0.15);
+  border-color: rgba(180, 212, 232, 0.4);
+  transform: translateX(4px);
+}
+.passage strong { color: #e8d4b4; }
+.tw-passage { display: none; }
+#passage-display { display: block; }
+/* Text2Game Twine Story Styles */
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+}
+
+#page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* 段落标题 */
+.passage h1, .passage h2 {
+  color: #e8d4b4;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+}
+
+/* 链接样式 */
+a {
+  color: #b4d4e8;
+  text-decoration: none;
+  border-bottom: 1px dotted #b4d4e8;
+  transition: all 0.2s;
+}
+a:hover {
+  color: #e8b4b8;
+  border-bottom-color: #e8b4b8;
+}
+
+/* Fork 选项 */
+.fork a {
+  display: block;
+  padding: 0.8rem 1.2rem;
+  margin: 0.5rem 0;
+  background: rgba(180, 212, 232, 0.08);
+  border: 1px solid rgba(180, 212, 232, 0.2);
+  border-radius: 6px;
+  border-bottom: none;
+  transition: all 0.25s;
+}
+.fork a:hover {
+  background: rgba(180, 212, 232, 0.15);
+  border-color: rgba(180, 212, 232, 0.4);
+  transform: translateX(4px);
+}
+
+/* 角色名着色 */
+.speaker-narrator { color: #999; font-style: italic; }
+.speaker-character { color: #e8b4b8; font-weight: bold; }
+
+/* 章节分隔 */
+hr {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 2rem 0;
+}
+
+/* 结局标题 */
+.ending-title {
+  text-align: center;
+  font-size: 1.5rem;
+  color: #e8d4b4;
+  margin: 2rem 0;
+}
+
+/* 知识碎片 */
+.knowledge-box {
+  background: rgba(232, 212, 180, 0.08);
+  border-left: 3px solid #e8d4b4;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+</style>
+</head>
+<body>
+<div id="page">
+  <article></article>
+</div>
+<tw-storydata style="display:none">
+<tw-passage id="passage-Start" name="Start" data-source="config:
+  page-transition: fade
+story.initialPassage: 'Start'
+--
+
+*压抑、绝望，寒冷与悲惨交织，繁华反衬出底层人的凄凉与无奈。*
+
+**【设定】**
+- 时代：民国时期（1920年代）
+- 地点：北平城及周边，包括西直门、海甸、天桥、人和车厂、大杂院、白房子等
+
+&gt; 社会阶级分明，底层车夫靠苦力维生，金钱和体力决定生存，社会不公，战争与谣言影响生活，个人努力难以改变命运，穷人只能挣扎于温饱边缘
+
+描写民国时期北平洋车夫的悲惨生活与个人奋斗的幻灭，展现底层人民的苦难与社会的冷酷，一个车夫在黑暗社会中三起三落、最终堕落的悲惨世界
+
+**【人物】**
+- **祥子** — 堕落车夫，最终靠打殡葬旗为生（要强、勤劳、堕落）
+- **虎妞** — 祥子的妻子，车厂老板之女（泼辣、精明、自私）
+- **刘四爷** — 人和车厂老板（精明、自私、狠心）
+- **曹先生** — 祥子的雇主，知识分子（温和、善良、有社会主义思想）
+- **小马儿** — 老车夫的孙子（年幼、懂事、贫苦）
+- **孙侦探** — 侦缉队人员（狡猾、贪婪、欺软怕硬）
+
+---
+
+*故事，从这里开始……*
+
+[[开始冒险-&gt;Chapter_01]]"></tw-passage>
+<tw-passage id="passage-Chapter_01" name="Chapter_01" data-source="## 第1章
+
+祥子站在崭新的车旁，眼中闪烁着泪光。三年，整整三年的风里来雨里去，省下每一分钱，现在终于换来了这辆属于自己的车。「这车，就是我的命！」他抚摸着光滑的车座，声音颤抖。
+
+他回想起在刘四爷车厂拉租界车的日子，那种寄人篱下的憋屈一扫而空。现在，他可以挺直腰板，凭本事吃饭了。祥子深吸一口气，空气里都带着自由的甜味。
+
+但一丝阴影掠过心头。他听说城外不太平，有散兵游勇。不过，他立刻甩甩头：「怕什么！我祥子要强了半辈子，还能让这点事吓倒？」他决定明天一早就出车，多跑几趟，攒钱把日子过得更红火。
+
+新车在阳光下闪闪发亮，仿佛在向他承诺一个清白而体面的未来。祥子笑了，那是许久未有的、发自心底的笑。
+
+---
+
+&gt; [[立刻出车拉活儿庆祝-&gt;Chapter_02]]
+&gt; [[先仔细检查车辆状况-&gt;Chapter_02]]
+&gt; [[计划存钱备用以防万一-&gt;Chapter_02]]
+
+[if choice_a_flag]story.state.set('choice_a_flag', true)[/]
+[if choice_b_flag]story.state.set('choice_b_flag', true)[/]
+[if choice_c_flag]story.state.set('choice_c_flag', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_02" name="Chapter_02" data-source="## 第2章
+
+天色将暮，祥子拉着新买的车，满怀希望地往城外赶。车座上的坐垫软和，他甚至盘算着回头给车把缠上新皮条。突然，斜刺里冲出几个穿灰布军服的兵，黑洞洞的枪口对准了他。
+「兵」：拉车的！把车放下，跟我们走一趟！
+祥子攥紧了车把，心里一阵冰凉。这车，是他三年血汗，是他所有未来的寄托。他猛地摇头，牙关紧咬，「祥子」：不！这是我自己的车！你们凭什么抢？
+「兵」：废什么话！（枪托砸在祥子肩上）带走！拉东西去！
+祥子被粗暴地拽离了车，眼睁睁看着那个兵跨上他的新车，像骑一匹驯服的马。他的指甲抠进了掌心，鲜血和屈辱一起涌上来。
+
+---
+
+&gt; [[拼命扑上去抢回车-&gt;Chapter_03]]
+&gt; [[表面顺从，暗中寻找机会-&gt;Chapter_03]]
+&gt; [[瘫倒在地，彻底绝望-&gt;Chapter_03]]
+
+[if desperate_resistance]story.state.set('desperate_resistance', true)[/]
+[if calm_surrender]story.state.set('calm_surrender', true)[/]
+[if total_despair]story.state.set('total_despair', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_03" name="Chapter_03" data-source="## 第3章
+
+祥子卖掉骆驼，手里攥着三十五块大洋，心中百感交集。他站在路边，望着北京城的方向，喃喃自语：「这钱够买辆新车了吗？不，上次的教训太深了。」老者收起骆驼，问道：「小伙子，你下一步去哪儿？」祥子沉默片刻，目光中闪过迷茫与挣扎。
+
+他想起被抢的新车，又想起车厂里的刘四爷。「或许该回车厂，把钱交给刘四爷保管，至少暂时安全。」但另一个声音说：「我自己留着钱，买辆旧车重新拉车，找回尊严。」同时，曹先生的善待也浮现在脑海：「去投靠曹先生，或许能有个安稳的开始。」
+
+---
+
+&gt; [[回人和车厂交钱-&gt;Chapter_04]]
+&gt; [[用钱买辆旧车-&gt;Chapter_04]]
+&gt; [[去投靠曹先生-&gt;Chapter_04]]
+
+[if return_to_manor]story.state.set('return_to_manor', true)[/]
+[if buy_old_rickshaw]story.state.set('buy_old_rickshaw', true)[/]
+[if seek_mr_cao]story.state.set('seek_mr_cao', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_04" name="Chapter_04" data-source="## 第4章
+
+祥子拖着疲惫的身子回到人和车厂，院子里弥漫着尘土和车油的味道。刘四爷坐在太师椅上抽着烟，虎妞在一旁擦拭着车具。
+
+「回来了？钱带回来了吗？」刘四爷的声音沙哑而严厉。
+
+祥子从怀里掏出卖骆驼得的三十五块钱，双手递过去：「四爷，这是我的积蓄，请您保管。」
+
+虎妞走过来，眼睛一亮：「哟，祥子，卖了骆驼赚了不少啊。打算怎么重新开始拉车？」
+
+祥子低下头：「我想攒钱买辆自己的车。」
+
+刘四爷冷笑一声：「先别做白日梦，好好拉车还债再说。钱放我这儿，丢不了。」
+
+祥子心里有些不安，但看着刘四爷那不容置疑的表情，他沉默了。
+
+---
+
+&gt; [[顺从刘四爷，交钱拉车-&gt;Chapter_05]]
+&gt; [[要求写收据，确保安全-&gt;Chapter_05]]
+&gt; [[考虑接受虎妞的帮助-&gt;Chapter_05]]
+
+[if obey_liu]story.state.set('obey_liu', true)[/]
+[if demand_receipt]story.state.set('demand_receipt', true)[/]
+[if accept_huniu]story.state.set('accept_huniu', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_05" name="Chapter_05" data-source="## 第5章
+
+在曹宅的日子，是祥子难得喘息的时光。曹先生待人和气，从不苛责，高妈也时常指点他。这日，祥子揣着刚发的工钱，心中默默盘算着离买车的目标又近了一步。
+
+「祥子，看你攒了些钱，可别放身边，不稳当。」高妈一边擦着桌子，一边热心建议，「我倒知道些门路，可以把钱放出去，生点利息，钱生钱，利滚利。」
+
+「高妈的好意我心领了。」祥子憨厚地笑了笑，手指不自觉地摩挲着衣袋，「可我这心里啊，就觉着钱攥在自己手里，才最踏实。」
+
+傍晚，曹先生书房的灯还亮着。他放下笔，叫住了正要退出去的祥子：「祥子，你是个实诚人。听闻你一直想买辆自己的车？这钱若只是存放，怕是追赶不上物价。若有需要，我可以帮你存在银行，多少有些利息，也安全。」
+
+---
+
+&gt; [[向曹先生坦白积蓄，托他存银行-&gt;Chapter_06]]
+&gt; [[婉拒曹先生，钱还是自己藏着-&gt;Chapter_06]]
+&gt; [[听高妈的，拿一部分去放印子钱-&gt;Chapter_06]]
+
+[if trust_mr_cao_bank]story.state.set('trust_mr_cao_bank', true)[/]
+[if hide_savings_alone]story.state.set('hide_savings_alone', true)[/]
+[if follow_gao_ma_loan]story.state.set('follow_gao_ma_loan', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_06" name="Chapter_06" data-source="## 第6章
+
+祥子攥紧了那个装着血汗钱的瓦罐，指节发白。胡同口阴影里走出一个人，拦住了他的去路。是孙侦探。
+
+「祥子，跟我们走一趟吧。」孙侦探的声音不高，却带着不容置疑的压迫感，「曹先生是乱党，你知道的。你给他拉车，就是同党。」
+
+祥子的心猛地一沉，瓦罐在他怀里显得滚烫。他想起曹先生的好，但更怕这吃人的罪名。孙侦探的眼睛像两把刀，刮过他每一个细微的表情。
+「别费劲了，」孙侦探逼近一步，「识相点，把你藏的‘体己钱’交出来，这事儿就算了了。不然……」他没说完，但祥子懂，进去了就别想囫囵个儿出来。
+
+---
+
+&gt; [[交出钱，屈辱地保命-&gt;Chapter_07]]
+&gt; [[拒绝交钱，与孙侦探拼命-&gt;Chapter_07]]
+&gt; [[假意答应，伺机逃向曹宅求救-&gt;Chapter_07]]
+
+[if surrender_to_sun]story.state.set('surrender_to_sun', true)[/]
+[if fight_sun_detective]story.state.set('fight_sun_detective', true)[/]
+[if flee_to_mr_cao]story.state.set('flee_to_mr_cao', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_07" name="Chapter_07" data-source="## 第7章
+
+刘四爷的寿宴上，祥子正忙着招呼客人，心里却七上八下。前些日子被孙侦探敲诈得一干二净，如今只能指望这份工钱。他瞥见虎妞在席间穿梭，眼神不时瞟向自己，心里暗叫不好。
+
+酒过三巡，虎妞突然站起身，高声道：「各位街坊都在，我今天就把话挑明了——我虎妞看上祥子了，要跟他过日子！」全场哗然。刘四爷脸色铁青，猛地拍桌子：「混账东西！你给老子滚！」
+
+虎妞毫不示弱：「滚就滚！这车厂的产业，本来也该有我一份！」祥子站在原地，手足无措，感觉所有人的目光都像针一样扎在身上。
+
+---
+
+&gt; [[冲上前去拉开虎妞-&gt;Chapter_08]]
+&gt; [[低头继续干活假装没看见-&gt;Chapter_08]]
+&gt; [[悄悄拉虎妞到角落劝说-&gt;Chapter_08]]
+
+[if intervene_conflict]story.state.set('intervene_conflict', true)[/]
+[if avoid_conflict]story.state.set('avoid_conflict', true)[/]
+[if mediate_conflict]story.state.set('mediate_conflict', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_08" name="Chapter_08" data-source="## 第8章
+
+婚礼的喜烛在小屋里跳动着不安的光。祥子坐在床沿，背对着虎妞，手里的烟烧到了指尖。他终于开口，声音沙哑：「你为什么骗我？」「骗？」虎妞翻了个身，语气带着惯常的泼辣，「你不娶我，难道还想着去拉一辈子臭车？我爹那份家当，够咱俩吃香喝辣！祥子，你那点出息就值一辆破洋车？」
+
+祥子猛地站起来，将烟蒂摔在地上用脚碾碎：「那是你的家当！不是我的！我祥子就算饿死，也不去你爹跟前摇尾乞怜！」虎妞冷笑一声：「有骨气？有骨气你现在就滚出去拉车啊，连窝头都啃不上的时候，看你的骨气值几个钱！」
+
+窗外传来远处车夫们收工的吆喝，那声音曾让祥子觉得亲切，此刻却刺得他心口发疼。他盯着墙上斑驳的墙皮，仿佛能看见自己那辆被大兵抢走的车、被孙侦探敲诈走的积蓄。自由，原来只是个笑话。
+
+---
+
+&gt; [[去找刘四爷服软-&gt;Chapter_09]]
+&gt; [[坚决不去，出门拉车-&gt;Chapter_09]]
+&gt; [[表面答应，暗中攒钱准备离开-&gt;Chapter_09]]
+
+[if choose_submit_to_liu]story.state.set('choose_submit_to_liu', true)[/]
+[if choose_persist_pulling]story.state.set('choose_persist_pulling', true)[/]
+[if choose_feign_comply]story.state.set('choose_feign_comply', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_09" name="Chapter_09" data-source="## 第9章
+
+祥子病后初愈，强撑着拉车，身体虚得直打晃。路上遇到高个子车夫，两人一前一后走着。高个子车夫擦着汗，转头对祥子说：「兄弟，娶了媳妇没？我可告诉你，成家就是自找苦吃，这拉车的活儿，养家累垮了身子，不值当！」祥子心头一颤，想起虎妞逼婚的事，低声应道：「刚...刚成家。」高个子车夫摇头叹气：「唉，瞧你这样，准是后悔了吧？我当年也是，媳妇孩子拖累，车拉不动，人也没了精神。」祥子默默听着，手紧攥着车把，心里泛起阵阵恐惧：成家果然会拖垮身体，那我辛苦拉车还有什么指望？
+
+---
+
+&gt; [[附和高个子，倾诉恐惧-&gt;Chapter_10]]
+&gt; [[反驳说成家不累，硬撑-&gt;Chapter_10]]
+
+[if agree_fear]story.state.set('agree_fear', true)[/]
+[if deny_burden]story.state.set('deny_burden', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_10" name="Chapter_10" data-source="## 第10章
+
+小福子拖着疲惫的身子回到家中，二强子正喝得醉醺醺的，见她回来便骂道：「死丫头，你还知道回来？军官把你甩了？现在得靠你养家了！」小福子的弟弟们围过来，眼中满是饥饿与期盼。
+
+小福子心中苦涩，但为了弟弟们，她咬牙说：「爹，我会想办法赚钱的。」这时，虎妞从隔壁走来，她叉着腰，打量着小福子：「哟，这不是福子吗？听说你回来了？要不跟我学学，赚快钱养家？」虎妞的话直白而现实。
+
+祥子恰好路过，听到动静，停下脚步。他看到小福子苍白的脸和坚强的眼神，心中一动，想起了高个子车夫的话，成家或许会拖垮人，但眼前这个女人却让他心生怜悯。
+
+---
+
+&gt; [[接受虎妞的帮助-&gt;Chapter_11]]
+&gt; [[拒绝虎妞，自寻出路-&gt;Chapter_11]]
+&gt; [[祥子上前帮忙-&gt;Chapter_11]]
+
+[if accept_hugu_help]story.state.set('accept_hugu_help', true)[/]
+[if reject_hugu_help]story.state.set('reject_hugu_help', true)[/]
+[if xiangzi_helps_xiaofuzi]story.state.set('xiangzi_helps_xiaofuzi', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_11" name="Chapter_11" data-source="## 第11章
+
+虎妞的阵痛愈发剧烈，收生婆和陈二奶奶忙得满头大汗却束手无策。祥子在屋外焦急地来回走动，拳头紧握，心中涌起不祥的预感。小福子轻轻走到他身边，低声说：「祥子，别太担心，虎妞姐会没事的。」
+
+突然，屋里传来一声凄厉的哭喊。收生婆冲出来，摇着头：「不行了，孩子没保住，虎妞也断了气。」祥子如遭雷击，踉跄着冲进房间，只见虎妞脸色惨白，身旁是死婴。小福子捂住嘴，泪水夺眶而出。
+
+「后事得赶紧办，」收生婆叹气道，「但你们家这情形，怕是没钱。」祥子看着虎妞的尸体，厌恶与解脱交织，最终化为沉重的责任感。小福子握紧他的手：「祥子，你得挺住，我帮你想想办法。」
+
+此刻，祥子面临艰难抉择：如何安葬虎妞，将决定他是否还能保留最后一丝希望。
+
+---
+
+&gt; [[卖车安葬虎妞-&gt;Chapter_12]]
+&gt; [[向邻居借钱募捐-&gt;Chapter_12]]
+&gt; [[草草埋葬，节省开支-&gt;Chapter_12]]
+
+[if sell_cart_for_funeral]story.state.set('sell_cart_for_funeral', true)[/]
+[if borrow_money_for_funeral]story.state.set('borrow_money_for_funeral', true)[/]
+[if hasty_burial]story.state.set('hasty_burial', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_12" name="Chapter_12" data-source="## 第12章
+
+虎妞的丧事办完后，祥子搬到了一个破旧的大杂院，靠打零工度日。一天黄昏，小福子悄悄找上门来。她脸色苍白，但眼神坚定：「祥子，现在妞儿没了，咱们能不能一起过？我还有两个弟弟要养，可我愿意跟你吃苦。」祥子蹲在门槛上，猛吸着劣质纸烟，烟雾缭绕中他的脸显得格外憔悴。
+
+「福子，」祥子声音沙哑，「我何尝不想？可你爸整天酗酒，你弟弟们还小，我连辆自己的车都攒不起，拿什么养活你们一大家子？」小福子眼眶红了，低头搓着衣角：「我会拼命干活的，洗衣、接客什么都行，只求有个依靠。」祥子心里一阵绞痛，他想起虎妞的压迫，想起孙侦探的敲诈，理想早已碎成渣。远处传来二强子的骂街声，更让他感到窒息。
+
+祥子站起来，在狭小的屋里踱步。小福子的善良和美丽是他黑暗生活中的唯一光亮，可现实像块巨石压得他喘不过气。他停下脚步，背对着她，仿佛这样就能减轻决定的重量。小福子轻声说：「祥子，我知道你难，但我...」话没说完，眼泪已滑落。
+
+---
+
+&gt; [[坚决拒绝，搬走-&gt;Chapter_13]]
+&gt; [[犹豫，提议先分开-&gt;Chapter_13]]
+&gt; [[接受，打算求助曹先生-&gt;Chapter_13]]
+
+[if refuse_strongly]story.state.set('refuse_strongly', true)[/]
+[if hesitate_separate]story.state.set('hesitate_separate', true)[/]
+[if accept_seek_help]story.state.set('accept_seek_help', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_13" name="Chapter_13" data-source="## 第13章
+
+祥子拖着疲惫的身子来到曹宅，曹先生正在书房里看书。见祥子进来，他放下书，温和地问道：「祥子，你看起来有心事，坐下来慢慢说。」祥子挺直腰板，声音带着颤抖：「曹先生，我...我想重新开始。刘四爷那边，我骂了他，不想再回去了。您能帮帮我吗？」曹先生推了推眼镜，点点头：「当然，祥子。你可以和福子一起住在这里，我会尽力安排。高妈，你来一下。」
+
+高妈应声进来，曹先生吩咐道：「帮祥子收拾个房间，他可能要长住。」高妈爽快地答应：「没问题，先生。祥子，小福子要是知道这消息，肯定乐坏了。」祥子的心砰砰直跳，眼前仿佛闪过小福子的笑脸。但突然，一阵不安涌上心头——他该立刻去告诉她，还是先等等？
+
+---
+
+&gt; [[立刻去找小福子分享好消息-&gt;Chapter_14]]
+&gt; [[先向高妈打听小福子近况-&gt;Chapter_14]]
+&gt; [[犹豫片刻，担心再次失望-&gt;Chapter_14]]
+
+[if flag_a]story.state.set('flag_a', true)[/]
+[if flag_b]story.state.set('flag_b', true)[/]
+[if flag_c]story.state.set('flag_c', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_14" name="Chapter_14" data-source="## 第14章
+
+祥子一路狂奔，心中涌起不祥的预感。当他赶到白房子附近的树林时，远远看见一个身影悬在老槐树上。
+
+「小福子！」祥子嘶声喊道，冲上前去。小福子穿着客人的旧衣裳，脸色苍白，已经没有了气息。白面口袋躲在树后，瑟瑟发抖。
+
+祥子颤抖着双手，想解开绳子，却又停住了。他的脑海里闪过曹先生的话：「带着福子一起来吧。」但如今一切都太晚了。树林里静悄悄的，只有风声呜咽。
+
+他蹲在地上，泪水无声地滑落。这一刻，他感到命运像一只无形的手，扼住了他的咽喉。
+
+---
+
+&gt; [[强行解开绳子，试图救她-&gt;Chapter_15]]
+&gt; [[跪地痛哭，呼唤她的名字-&gt;Chapter_15]]
+&gt; [[冷静下来，去找曹先生帮忙-&gt;Chapter_15]]
+
+[if force_rescue]story.state.set('force_rescue', true)[/]
+[if grief_breakdown]story.state.set('grief_breakdown', true)[/]
+[if seek_help]story.state.set('seek_help', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_15" name="Chapter_15" data-source="## 第15章
+
+那是个沉闷的午后，祥子缩在人和车厂附近的茶馆里，兜里那点钱早被孙侦探敲走，如今只剩一身的疲惫与愤恨。一个瘦高的身影在他对面坐下，是阮明。他曾教祥子些新词儿，祥子也曾觉得他或许是个好人。
+
+「祥子，世道越来越乱了，」阮明压低声音，「跟我一起干吧，为了穷哥们儿。」祥子捏紧了空茶碗，眼前晃过小福子吊死的身影，耳边是孙侦探的冷笑。他知道，阮明这种人，在衙门里值一笔赏钱——六十块，能买辆车，能过一阵子日子。
+
+「阮先生，」祥子的声音干涩得像砂纸，「我……我答应你。明天你去西直门外那棵老槐树下等我，有要紧话。」阮明点了点头，信任地拍了拍祥子的肩。祥子看着他离去的背影，只觉得那六十块钱在兜里沉甸甸的，烫得人心慌。
+
+第二天，祥子在警局门口徘徊了很久。他能听到自己心里有个声音在喊：这是你最后的机会，拿这钱，活下去！另一个微弱的声音却在颤抖：卖了他，你就彻底完了，连人都不是了。他攥紧了拳头，指甲陷进肉里，最终还是推开了那扇决定命运的门。
+
+---
+
+&gt; [[咬咬牙，告发阮明换赏钱-&gt;Chapter_16]]
+&gt; [[放走阮明，但骗他说自己病了-&gt;Chapter_16]]
+&gt; [[向阮明坦白，劝他一起逃-&gt;Chapter_16]]
+
+[if betray_ruan_ming_for_money]story.state.set('betray_ruan_ming_for_money', true)[/]
+[if lie_to_ruan_ming_to_avoid_complicity]story.state.set('lie_to_ruan_ming_to_avoid_complicity', true)[/]
+[if confess_and_flee_with_ruan_ming]story.state.set('confess_and_flee_with_ruan_ming', true)[/]"></tw-passage>
+<tw-passage id="passage-Chapter_16" name="Chapter_16" data-source="## 第16章
+
+祥子站在街角，手里握着破旧的旗杆，看着红白事队伍缓缓走过。他的眼神空洞，仿佛灵魂已经抽离。「拉车的日子，就像一场梦，」他低声说，声音沙哑。
+
+他想起小福子，想起虎妞，想起所有失去的一切。如今，他只靠打旗混口饭吃，人格和希望都已荡然无存。
+
+这时，一辆熟悉的黄包车驶过，车上坐着曹先生。祥子的心猛地一跳，那是他曾经敬重的人。但脚步却沉重得无法移动。
+
+他面临着最后的选择，每一步都可能决定他的结局。
+
+---
+
+&gt; [[追上曹先生求助-&gt;Ending_Normal]]
+&gt; [[无视继续打旗-&gt;Ending_Normal]]
+&gt; [[走向僻静处自尽-&gt;Ending_Normal]]
+
+[if choice_a_flag]story.state.set('choice_a_flag', true)[/]
+[if choice_b_flag]story.state.set('choice_b_flag', true)[/]
+[if choice_c_flag]story.state.set('choice_c_flag', true)[/]"></tw-passage>
+<tw-passage id="passage-Ending_Good" name="Ending_Good" data-source="## ═══ 希望结局 ═══
+
+{story.state.get('good_count', 0)}
+
+
+经历了无数磨难，祥子终于看到了一丝曙光。
+
+虽然世界依然残酷，但内心深处的火焰并未完全熄灭。
+
+*也许，明天会更好。*
+
+---
+
+[[重新开始-&gt;Start]]"></tw-passage>
+<tw-passage id="passage-Ending_Normal" name="Ending_Normal" data-source="## ═══ 平凡结局 ═══
+
+{story.state.get('good_count', 0)}
+
+
+祥子虽然未能改变命运，但至少保住了最后的尊严。
+
+没有轰轰烈烈，没有功成名就。
+
+*但至少，还有呼吸。*
+
+---
+
+[[重新开始-&gt;Start]]"></tw-passage>
+<tw-passage id="passage-Ending_Bad" name="Ending_Bad" data-source="## ═══ 堕落结局 ═══
+
+{story.state.get('good_count', 0)}
+
+
+祥子在命运的捉弄下，最终失去了所有希望……
+
+在这片北平的大地上，故事走向了最黑暗的终点。
+
+*一切都结束了。*
+
+---
+
+[[重新开始-&gt;Start]]"></tw-passage>
+<tw-passage id="passage-Knowledge_World" name="Knowledge_World" data-source="## 关于这个世界
+
+描写民国时期北平洋车夫的悲惨生活与个人奋斗的幻灭，展现底层人民的苦难与社会的冷酷，一个车夫在黑暗社会中三起三落、最终堕落的悲惨世界
+
+社会阶级分明，底层车夫靠苦力维生，金钱和体力决定生存，社会不公，战争与谣言影响生活，个人努力难以改变命运，穷人只能挣扎于温饱边缘
+
+---
+
+{back link}"></tw-passage>
+<tw-passage id="passage-Knowledge_祥子" name="Knowledge_祥子" data-source="## 关于 祥子
+
+**堕落车夫，最终靠打殡葬旗为生**
+
+祥子来自乡间，父母双亡，十八岁来到北平以拉车为生。他省吃俭用三年，终于买下自己的车，却被兵痞抢走。乘乱逃出后，他卖掉骆驼得了三十五元，又遭侦探敲诈一空。后被迫娶虎妞，失去自由。他三次买车失败：第一次被兵抢，第二次被侦探诈，第三次为虎妞办丧卖车。经历虎妞纠缠、小福子之死等打击后，最终堕落成自私、懒惰、出卖朋友的无赖，以打殡葬旗为生。
+
+---
+
+{back link}"></tw-passage>
+<tw-passage id="passage-Knowledge_虎妞" name="Knowledge_虎妞" data-source="## 关于 虎妞
+
+**祥子的妻子，车厂老板之女**
+
+虎妞是人和车厂老板刘四爷的独女，三十七八岁未嫁，长得虎头虎脑，从小帮助父亲管理车厂。她设计了一场骗局，假称怀孕迫使祥子与自己结婚。婚后她极力控制祥子，用钱拿捏他，享受新婚生活却不愿让他继续拉车。最终虎妞难产而死，胎儿也未保住。
+
+---
+
+{back link}"></tw-passage>
+<tw-passage id="passage-Knowledge_刘四爷" name="Knowledge_刘四爷" data-source="## 关于 刘四爷
+
+**人和车厂老板**
+
+刘四爷年轻时当过库兵、设过赌场，老年开办人和车厂。他只有一个女儿虎妞，不愿她出嫁。他对祥子既有利用又看不起。因不满女儿嫁给祥子，与女儿决裂后卖掉车厂，携款离开北平去外地享乐。后来女儿死后被祥子咒骂。
+
+---
+
+{back link}"></tw-passage>
+
+</tw-storydata>
+<script>
+(function(){
+'use strict';
+
+// ── State ──
+const state = {};
+const trail = [];
+
+function get(name) {
+  if (name.indexOf('.') === -1) return state[name];
+  return name.split('.').reduce((o,k) => o && o[k], state);
+}
+
+// Chapbook-compatible story object
+window.story = {
+  state: {
+    get: function(name, defaultVal) {
+      const v = get(name);
+      return v !== undefined ? v : (defaultVal !== undefined ? defaultVal : undefined);
+    },
+    set: function(name, value) { set(name, value); },
+    has: function(name) { return get(name) !== undefined; }
+  },
+  hasPassage: function(name) {
+    return document.querySelector('tw-passage[name="' + name + '"]') !== null;
+  }
+};
+
+function set(name, value) {
+  const parts = name.split('.');
+  let obj = state;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!obj[parts[i]]) obj[parts[i]] = {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length-1]] = value;
+}
+
+// ── Passage parsing ──
+function parsePassage(source) {
+  const result = { vars: [], blocks: [] };
+  const parts = source.split(/^--$/m);
+  let varSection = null, bodySection = source;
+
+  if (parts.length >= 2) {
+    varSection = parts[0];
+    bodySection = parts.slice(1).join('\n--\n');
+  }
+
+  // Parse vars (lines before --)
+  if (varSection !== null) {
+    let inConfig = false;
+    varSection.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line) { inConfig = false; return; }
+      // config: section header - skip indented lines after it
+      if (line === 'config:') { inConfig = true; return; }
+      if (inConfig && line.startsWith(' ')) return; // indented under config:
+      inConfig = false;
+      // config.X: value lines (top-level config)
+      if (line.startsWith('config.')) {
+        const m = line.match(/^config\.([\w.]+)\s*:\s*(.+)$/);
+        if (m) try { set('config.' + m[1], new Function('return ' + m[2])()); } catch(e) {}
+        return;
+      }
+      const colonIdx = line.indexOf(':');
+      if (colonIdx === -1) return;
+      const varName = line.substring(0, colonIdx).trim();
+      let varValue = line.substring(colonIdx + 1).trim();
+      // Handle conditional: name (condition): value
+      const condMatch = varName.match(/^(.+?)\s*\((.+)\)\s*$/);
+      if (condMatch) {
+        try { if (new Function('return ' + condMatch[2])()) set(condMatch[1], new Function('return ' + varValue)()); } catch(e) {}
+      } else {
+        try { set(varName, new Function('return ' + varValue)()); } catch(e) { set(varName, varValue); }
+      }
+    });
+  }
+
+  // Split body into blocks (text and modifiers)
+  const modifierPattern = /^\[([^[].+[^\\]])\]$/gm;
+  let match, lastIndex = 0;
+  const rawBlocks = [];
+
+  while ((match = modifierPattern.exec(bodySection)) !== null) {
+    if (match.index > lastIndex) {
+      rawBlocks.push({ type: 'text', content: bodySection.substring(lastIndex, match.index) });
+    }
+    rawBlocks.push({ type: 'modifier', content: match[1] });
+    lastIndex = modifierPattern.lastIndex;
+  }
+  if (lastIndex < bodySection.length) {
+    rawBlocks.push({ type: 'text', content: bodySection.substring(lastIndex) });
+  }
+
+  // Process modifiers and build final blocks
+  let conditionStack = []; // stack of {active, wasTrue} for nested [if]/[/if]
+  let conditionState = null; // current condition result (true/false/null)
+
+  rawBlocks.forEach(block => {
+    if (block.type === 'modifier') {
+      const mod = block.content.trim();
+      // Closing tag [/if] [/unless] [/]
+      if (mod === '/if' || mod === '/unless' || mod === '/') {
+        conditionStack.pop();
+        conditionState = conditionStack.length > 0 ? conditionStack[conditionStack.length - 1].active : null;
+        return;
+      }
+      const ifMatch = mod.match(/^if\s+(.+)$/);
+      const unlessMatch = mod.match(/^unless\s+(.+)$/);
+      const elseMatch = mod.match(/^else$/);
+
+      if (elseMatch) {
+        if (conditionStack.length > 0) {
+          const top = conditionStack[conditionStack.length - 1];
+          top.active = !top.active;
+          conditionState = top.active;
+        }
+      } else if (ifMatch) {
+        let result = false;
+        try { result = new Function('return ' + ifMatch[1])(); } catch(e) {}
+        conditionStack.push({ active: result, wasTrue: result });
+        conditionState = result;
+      } else if (unlessMatch) {
+        let result = false;
+        try { result = new Function('return ' + unlessMatch[1])(); } catch(e) {}
+        conditionStack.push({ active: !result, wasTrue: !result });
+        conditionState = !result;
+      }
+    } else {
+      // Text block: render only if condition is true (or no condition)
+      if (conditionState === false) return;
+      if (block.content.trim()) {
+        result.blocks.push({ type: 'text', content: processInlineModifiers(block.content) });
+      }
+    }
+  });
+
+  return result;
+}
+
+// Process inline [if]...[/if] or [if]...[/] within a text block
+function processInlineModifiers(text) {
+  // [if cond]...[/if] or [if cond]...[/]
+  return text.replace(/\[if\s+([^\]]+)\]([\s\S]*?)\[(?:\/if|\/)\]/g, (match, cond, body) => {
+    try {
+      if (!new Function('return ' + cond)()) return '';
+    } catch(e) { return ''; }
+    return body.replace(/\[else\]/g, '');
+  }).replace(/\[unless\s+([^\]]+)\]([\s\S]*?)\[(?:\/unless|\/)\]/g, (match, cond, body) => {
+    try {
+      if (new Function('return ' + cond)()) return '';
+    } catch(e) { return ''; }
+    return body.replace(/\[else\]/g, '');
+  });
+}
+
+// ── Markdown-like rendering ──
+function renderText(text) {
+  if (!text) return '';
+  // Variable interpolation: {varname}
+  text = text.replace(/\{([^}]+)\}/g, (match, expr) => {
+    expr = expr.trim();
+    if (expr === 'back link') {
+      if (trail.length > 1) {
+        const prev = trail[trail.length - 2];
+        return '<a href="javascript:void(0)" data-cb-go="' + prev + '">Back</a>';
+      }
+      return '<a href="javascript:void(0)" data-cb-go="' + trail[0] + '">Back</a>';
+    }
+    const val = get(expr);
+    if (val !== undefined) return val;
+    // Try evaluating as JS expression (e.g. story.state.get('x', 0))
+    try { return new Function('return ' + expr)(); } catch(e) {}
+    return match;
+  });
+  // Links: [[text->passage]] or [[passage]]
+  text = text.replace(/\[\[([^\]]+?)\]\]/g, (match, inner) => {
+    let label, target;
+    if (inner.indexOf('->') !== -1) {
+      const parts = inner.split('->');
+      label = parts[0].trim();
+      target = parts.slice(1).join('->').trim();
+    } else {
+      label = target = inner.trim();
+    }
+    return '<a href="javascript:void(0)" data-cb-go="' + target + '">' + label + '</a>';
+  });
+  // Blockquote (fork): lines starting with >
+  text = text.replace(/^>\s*(.+)$/gm, '<div class="fork">$1</div>');
+  // Headings
+  text = text.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+  text = text.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Horizontal rule
+  text = text.replace(/^---+$/gm, '<hr>');
+  // Line breaks
+  text = text.replace(/\n\n/g, '</p><p>');
+  text = text.replace(/\n/g, '<br>');
+  return '<p>' + text + '</p>';
+}
+
+// ── Display ──
+function go(passageName) {
+  const el = document.querySelector('tw-passage[id="passage-' + passageName + '"]');
+  if (!el) {
+    document.getElementById('page').innerHTML = '<article><p>Passage not found: ' + passageName + '</p></article>';
+    return;
+  }
+  trail.push(passageName);
+
+  const source = el.getAttribute('data-source') || el.textContent || '';
+  const parsed = parsePassage(source);
+  let html = '';
+  parsed.blocks.forEach(b => { html += renderText(b.content); });
+
+  const article = document.querySelector('#page article') || document.querySelector('#page');
+  article.innerHTML = '<tw-passage class="passage" id="passage-display">' + html + '</tw-passage>';
+
+  // Bind links
+  article.querySelectorAll('a[data-cb-go]').forEach(a => {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      go(this.getAttribute('data-cb-go'));
+    });
+  });
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+function restart() {
+  trail.length = 0;
+  // Re-init state
+  Object.keys(state).forEach(k => delete state[k]);
+  // Set defaults from first passage
+  const startEl = document.querySelector('tw-passage[name="Start"]');
+  if (startEl) parsePassage(startEl.getAttribute('data-source') || '');
+  go('Start');
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', function() {
+  const storyData = document.querySelector('tw-storydata');
+  if (!storyData) { document.body.innerHTML = '<p>No story data found.</p>'; return; }
+
+  // Process all passages to set variables
+  storyData.querySelectorAll('tw-passage').forEach(el => {
+    const src = el.getAttribute('data-source') || '';
+    const parts = src.split(/^--$/m);
+    if (parts.length >= 2) {
+      let inConfig = false;
+      parts[0].split('\n').forEach(line => {
+        line = line.trim();
+        if (!line) { inConfig = false; return; }
+        if (line === 'config:') { inConfig = true; return; }
+        if (inConfig && line.startsWith(' ')) return;
+        inConfig = false;
+        if (line.startsWith('config.')) {
+          const m = line.match(/^config\.([\w.]+)\s*:\s*(.+)$/);
+          if (m) try { set('config.' + m[1], new Function('return ' + m[2])()); } catch(e) {}
+          return;
+        }
+        const colonIdx = line.indexOf(':');
+        if (colonIdx === -1) return;
+        const varName = line.substring(0, colonIdx).trim();
+        const varValue = line.substring(colonIdx + 1).trim();
+        try { set(varName, new Function('return ' + varValue)()); } catch(e) { set(varName, varValue); }
+      });
+    }
+  });
+
+  // Apply user stylesheet
+  const userStyle = storyData.querySelector('style');
+  if (userStyle) {
+    const style = document.createElement('style');
+    style.textContent = userStyle.textContent;
+    document.head.appendChild(style);
+  }
+
+  // Apply user script
+  const userScript = storyData.querySelector('script');
+  if (userScript) {
+    try { new Function(userScript.textContent)(); } catch(e) {}
+  }
+
+  // Use story.initialPassage if set, otherwise 'Start'
+  const startPassage = get('story.initialPassage') || 'Start';
+  go(startPassage);
+});
+
+window.go = go;
+window.restart = restart;
+})();
+</script>
+<script>
+// Text2Game Twine Story JavaScript
+// 角色颜色映射
+window.t2gCharacters = {"祥子": "#E8B4B8", "虎妞": "#B4D4E8", "刘四爷": "#B8E8B4", "曹先生": "#E8D4B4", "小马儿": "#D4B4E8", "孙侦探": "#B4E8D4", "小福子": "#E8E8B4", "二强子": "#B4B4E8", "高妈": "#E8B4B8"};
+</script>
+</body>
+</html>
