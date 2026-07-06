@@ -651,14 +651,83 @@ func make_choice(choice_index: int) -> void:
 
 def main():
     parser = argparse.ArgumentParser(description="Text2Game - 游戏生成器")
-    parser.add_argument("-a", "--analysis", required=True, help="分析结果JSON文件路径")
-    parser.add_argument("-t", "--type", required=True, choices=SUPPORTED_TYPES,
+    parser.add_argument("-a", "--analysis", help="分析结果JSON文件路径")
+    parser.add_argument("-t", "--type", choices=SUPPORTED_TYPES,
                        help="游戏类型")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT_DIR, help=f"输出目录 (默认: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("-n", "--name", help="自定义游戏名称")
     parser.add_argument("--no-llm", action="store_true", help="不使用LLM生成分支剧情（使用模板回退）")
+    parser.add_argument("--cache-info", action="store_true", help="显示VN生成器缓存信息")
+    parser.add_argument("--clear-cache", action="store_true", help="清除VN生成器缓存")
     
     args = parser.parse_args()
+    
+    # 处理缓存管理命令
+    if args.cache_info or args.clear_cache:
+        # 动态导入避免循环依赖
+        import importlib.util
+        
+        # 先导入 base 模块
+        base_spec = importlib.util.spec_from_file_location(
+            "base",
+            Path(__file__).parent / "generators" / "base.py"
+        )
+        if base_spec and base_spec.loader:
+            base_mod = importlib.util.module_from_spec(base_spec)
+            base_spec.loader.exec_module(base_mod)
+            # 注册到 sys.modules 以便子模块导入
+            import sys
+            sys.modules["pi_mode.generators.base"] = base_mod
+            sys.modules["generators.base"] = base_mod
+        
+        _spec = importlib.util.spec_from_file_location(
+            "visual_novel",
+            Path(__file__).parent / "generators" / "visual_novel.py"
+        )
+        if _spec and _spec.loader:
+            _mod = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            VisualNovelGenerator = _mod.VisualNovelGenerator
+        else:
+            VisualNovelGenerator = None
+        
+        _spec2 = importlib.util.spec_from_file_location(
+            "twine",
+            Path(__file__).parent / "generators" / "twine.py"
+        )
+        if _spec2 and _spec2.loader:
+            _mod2 = importlib.util.module_from_spec(_spec2)
+            _spec2.loader.exec_module(_mod2)
+            TwineGenerator = _mod2.TwineGenerator
+        else:
+            TwineGenerator = None
+        
+        generators = []
+        if VisualNovelGenerator:
+            generators.append(("VN", VisualNovelGenerator(args.output)))
+        if TwineGenerator:
+            generators.append(("Twine", TwineGenerator(args.output)))
+        
+        if args.cache_info:
+            print("缓存信息:")
+            for name, gen in generators:
+                info = gen.cache.get_cache_info()
+                print(f"  {name}: {info['count']}个文件, {info['size_human']}")
+                print(f"    目录: {info['dir']}")
+        
+        if args.clear_cache:
+            total = 0
+            for name, gen in generators:
+                count = gen.cache.clear_cache()
+                total += count
+                print(f"  {name}: 清除 {count} 个缓存文件")
+            print(f"共清除 {total} 个缓存文件")
+        
+        return
+    
+    # 检查必需参数
+    if not args.analysis or not args.type:
+        parser.error("生成游戏需要 -a/--analysis 和 -t/--type 参数")
     
     # 创建生成器
     generator = GameGenerator(args.output)
@@ -673,8 +742,27 @@ def main():
             if new_path.exists():
                 shutil.rmtree(new_path)
             os.rename(project_path, new_path)
+            project_path = str(new_path)
             print(f"\n游戏已重命名为: {args.name}")
         
+        # Twine 类型自动编译为 HTML
+        if args.type == "twine":
+            project_dir = Path(project_path)
+            twee_files = list(project_dir.glob("*.twee"))
+            if twee_files:
+                print(f"\n正在编译 Twine 故事...")
+                try:
+                    from compile_twee import compile_twee
+                    for twee_file in twee_files:
+                        html_path = twee_file.with_suffix(".html")
+                        compile_twee(twee_file, html_path)
+                        print(f"[OK] 编译完成: {html_path}")
+                except ImportError:
+                    print("[WARN] 无法导入 compile_twee，请手动编译")
+                    print(f"  命令: uv run python pi_mode/compile_twee.py {project_path}")
+                except Exception as e:
+                    print(f"[WARN] 编译失败: {e}")
+    
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)
         sys.exit(1)

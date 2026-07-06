@@ -1,0 +1,117 @@
+你是游戏叙事规划师。在生成具体分支内容之前，请先规划分支的整体方向和方案。
+
+## 目的
+先确定"走向方案"，再据此生成具体对话内容。这保证分支之间的差异性和连贯性。
+
+## 输入信息
+
+### 故事大纲
+{outline}
+
+### 当前事件
+{event}
+
+### 涉及角色
+{characters_info}
+
+### 核心冲突
+{conflicts}
+
+### 人物关系
+{relationships}
+
+### 前一个事件
+{prev_event}
+
+### 下一个事件
+{next_event}
+
+### 当前游戏状态（之前的选择累积）
+{game_state}
+
+## 输出格式（严格JSON）
+
+```json
+{{
+  "chapter_summary": "本章节的2-3句概述（在分支选择前显示）",
+  "branch_plans": [
+    {{
+      "id": "branch_a",
+      "direction": "这个分支的整体走向描述",
+      "emotional_tone": "情感基调（如：坚定、犹豫、绝望、希望）",
+      "key_action": "玩家选择的核心动作是什么（如：反抗、妥协、逃避）",
+      "plot_consequence": "这个选择对后续剧情的具体影响（会改变什么）",
+      "character_impact": {{
+        "角色名": "这个选择如何影响该角色"
+      }},
+      "leads_to": "这个分支会导致什么结果（与下一个事件如何衔接）",
+      "ending_bias": "这个选择偏向哪种结局（good/normal/bad/neutral）"
+    }},
+    {{
+      "id": "branch_b",
+      "direction": "...",
+      "emotional_tone": "...",
+      "key_action": "...",
+      "plot_consequence": "...",
+      "character_impact": {{}},
+      "leads_to": "...",
+      "ending_bias": "..."
+    }},
+    {{
+      "id": "branch_c",
+      "direction": "...",
+      "emotional_tone": "...",
+      "key_action": "...",
+      "plot_consequence": "...",
+      "character_impact": {{}},
+      "leads_to": "...",
+      "ending_bias": "..."
+    }}
+  ],
+  "choice_texts": [
+    {{
+      "id": "branch_a",
+      "short_text": "选择的简短标签（6-10字）",
+      "hint_text": "选择的内心独白或暗示（15-25字）"
+    }},
+    {{
+      "id": "branch_b",
+      "short_text": "...",
+      "hint_text": "..."
+    }},
+    {{
+      "id": "branch_c",
+      "short_text": "...",
+      "hint_text": "..."
+    }}
+  ],
+  "state_changes": {{
+    "branch_a": {{
+      "flags": {{"flag_name": true}},
+      "relationship_changes": {{"角色A_角色B": 1}}
+    }},
+    "branch_b": {{
+      "flags": {{}},
+      "relationship_changes": {{}}
+    }},
+    "branch_c": {{
+      "flags": {{}},
+      "relationship_changes": {{}}
+    }}
+  }}
+}}
+```
+
+## 严格要求
+
+1. **数量**：必须规划2-3个分支方向，不能少于2个
+2. **差异化**：每个分支必须有明显不同的走向，不能只是语气不同
+   - 至少一个分支接近"原文走向"（顺应事件的发展）
+   - 至少一个分支是"alternative path"（改变事件走向）
+3. **有意义**：每个选择必须对后续剧情产生实际影响
+   - plot_consequence 必须具体说明改变了什么
+   - leads_to 必须说明如何与下一个事件衔接
+4. **情感差异**：每个分支的情感基调必须不同
+5. **结局导向**：不同选择应该对最终结局产生不同倾向
+6. **角色影响**：每个选择应该对涉及的角色产生不同影响
+7. **纯JSON**：只输出JSON对象，不要输出任何其他内容
