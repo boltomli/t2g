@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Untitled</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Georgia', serif;
+  font-size: 18px;
+  line-height: 1.8;
+}
+#page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+.passage h2 {
+  color: #e8d4b4;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+  margin: 1.5rem 0 0.8rem;
+}
+.passage h3 { color: #e8d4b4; margin: 1rem 0 0.5rem; }
+.passage p { margin: 0.6rem 0; }
+.passage a {
+  color: #b4d4e8;
+  text-decoration: none;
+  border-bottom: 1px dotted #b4d4e8;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.passage a:hover {
+  color: #e8b4b8;
+  border-bottom-color: #e8b4b8;
+}
+.passage hr {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 2rem 0;
+}
+.passage .fork {
+  margin: 0.5rem 0;
+}
+.passage .fork a {
+  display: block;
+  padding: 0.8rem 1.2rem;
+  background: rgba(180, 212, 232, 0.08);
+  border: 1px solid rgba(180, 212, 232, 0.2);
+  border-radius: 6px;
+  border-bottom: 1px solid rgba(180, 212, 232, 0.2);
+  transition: all 0.25s;
+}
+.passage .fork a:hover {
+  background: rgba(180, 212, 232, 0.15);
+  border-color: rgba(180, 212, 232, 0.4);
+  transform: translateX(4px);
+}
+.passage strong { color: #e8d4b4; }
+.tw-passage { display: none; }
+#passage-display { display: block; }
+
+</style>
+</head>
+<body>
+<div id="page">
+  <article></article>
+</div>
+<tw-storydata style="display:none">
+<tw-passage id="passage-StoryTitle" name="StoryTitle" data-source="[探讨如何通过“道”与“人和”来实现个体和社会的和谐发展，并强调大丈夫的道德自强。之旅]"></tw-passage>
+<tw-passage id="passage-Start" name="Start" data-source="## 开始
+
+欢迎来到《孟子三章》
+
+这是一个关于探讨如何通过“道”与“人和”来实现个体和社会的和谐发展，并强调大丈夫的道德自强。的故事。
+
+你是主角，追求真理的探索者。
+
+[[开始旅程-&gt;prologue]]"></tw-passage>
+<tw-passage id="passage-prologue" name="prologue" data-source="## 序章：命运的起点
+
+你踏上了追寻道德自强和和谐共存的旅程...
+
+[[选择力量之路-&gt;chapter_1]]
+[[选择智慧之路-&gt;chapter_1]]
+[[选择仁爱之路-&gt;chapter_1]]"></tw-passage>
+<tw-passage id="passage-chapter_1" name="chapter_1" data-source="## 第1章：道 (The Way)的考验
+
+在边陲的寒冷山谷中，探索者站在一片被战争蹂躏过的废墟之上。他凝视着远方，心中充满了对“道”的追寻与对现实的无奈。身旁，困惑者紧握着拳头，眼中充满了对未来不确定性的忧患。他们知道，要实现理想中的“大丈夫”，就必须在物质的匮乏和外界的残酷压力下磨砺心志。
+
+“我们追求的是内在的平衡，”探索者低声说，“但外部的世界却要求我们做出抉择。当‘人和’被打破时，个体如何才能坚守自身的道德原则？”
+
+困惑者叹息道：“地利不如人和。如果盲目追逐力量，我们可能会迷失了真正的道；如果沉溺于安乐，又将无法面对忧患的考验。我们该如何在这巨大的矛盾中找到平衡点？”
+
+他们意识到，试炼并非来自外部的敌人，而是来自内心深处的挣扎：是选择顺应现实的利益，还是坚持高尚的道德准则？道真正的考验，在于如何在苦难之中，实现内心的和谐与自强。
+
+[[寻求外部力量的帮助-&gt;chapter_2]]
+[[坚持内在的道德自强-&gt;chapter_2]]
+[[尝试建立社会和谐-&gt;ending_victory]]"></tw-passage>
+<tw-passage id="passage-chapter_2" name="chapter_2" data-source="## 第2章：人和 (Harmony)的考验
+
+在边境的寒风中，困惑者（你）与君子并肩而立。眼前的山脉如同沉重的枷锁，象征着外部世界的压力和竞争。你深知，所谓的‘人和’并非仅仅是表面的和平，而是人心、社会之间相互顺应的内在状态。然而，此刻，所有的目光都聚焦在你眼中，他们期待你做出一个决定，来证明你的心志是否能够与这残酷的环境和谐共存。
+
+君子轻声提醒道：“世间的艰难，正是磨砺‘人和’的试金石。你所追求的，当是内心的平衡，而非外在的得失。当忧患逼近，你必须选择：是沉溺于眼前的安逸，还是以道德为锚，坚守你的正位？真正的力量，在于如何在压力之下，保持内心的道义。
+
+远处，一个充满诱惑的富庶之地散发着令人心动的光芒。有人告诉你，只有顺应世俗的利益，才能获得表面的安宁。但你深吸一口气，意识到这种表面的和谐，是以牺牲内在的道德为代价的。现在，你必须决定：你的力量将流向何方？是追求眼前的安逸与物质的满足，还是选择以道义自强，面对更深层次的忧患，去构建真正属于你的和谐。
+
+
+[[追逐富庶之地。-&gt;ending_victory]]
+[[坚守道德自强。-&gt;ending_victory]]
+[[寻求集体共识。-&gt;ending_victory]]"></tw-passage>
+<tw-passage id="passage-ending_victory" name="ending_victory" data-source="## 胜利
+
+你成功地实现了目标，体现了道德自强的力量。
+
+*坚持就是胜利。*
+
+记住，每一次选择都是一次成长的机会。
+
+[[重新开始-&gt;Start]]"></tw-passage>
+<tw-passage id="passage-ending_sacrifice" name="ending_sacrifice" data-source="## 牺牲
+
+为了守护道德自强，你做出了艰难的牺牲。
+
+*牺牲是成长的一部分。*
+
+有时候，失去是为了更好地获得。
+
+[[重新开始-&gt;Start]]"></tw-passage>
+<tw-passage id="passage-ending_compromise" name="ending_compromise" data-source="## 妥协
+
+你在理想与现实之间找到了平衡。
+
+*妥协不是软弱，而是智慧。*
+
+真正的智慧在于知道何时坚持，何时妥协。
+
+[[重新开始-&gt;Start]]"></tw-passage>
+<tw-passage id="passage-ending_transformation" name="ending_transformation" data-source="## 蜕变
+
+经历了一切，你完成了自我蜕变。
+
+*成长来自于经历和反思。*
+
+每一次选择都是一次成长的机会。
+
+[[重新开始-&gt;Start]]"></tw-passage>
+
+</tw-storydata>
+<script>
+(function(){
+'use strict';
+
+// ── State ──
+const state = {};
+const trail = [];
+
+function get(name) {
+  if (name.indexOf('.') === -1) return state[name];
+  return name.split('.').reduce((o,k) => o && o[k], state);
+}
+
+// Chapbook-compatible story object
+window.story = {
+  state: {
+    get: function(name, defaultVal) {
+      const v = get(name);
+      return v !== undefined ? v : (defaultVal !== undefined ? defaultVal : undefined);
+    },
+    set: function(name, value) { set(name, value); },
+    has: function(name) { return get(name) !== undefined; }
+  },
+  hasPassage: function(name) {
+    return document.querySelector('tw-passage[name="' + name + '"]') !== null;
+  }
+};
+
+function set(name, value) {
+  const parts = name.split('.');
+  let obj = state;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!obj[parts[i]]) obj[parts[i]] = {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length-1]] = value;
+}
+
+// ── Passage parsing ──
+function parsePassage(source) {
+  const result = { vars: [], blocks: [] };
+  const parts = source.split(/^--$/m);
+  let varSection = null, bodySection = source;
+
+  if (parts.length >= 2) {
+    varSection = parts[0];
+    bodySection = parts.slice(1).join('\n--\n');
+  }
+
+  // Parse vars (lines before --)
+  if (varSection !== null) {
+    let inConfig = false;
+    varSection.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line) { inConfig = false; return; }
+      // config: section header - skip indented lines after it
+      if (line === 'config:') { inConfig = true; return; }
+      if (inConfig && line.startsWith(' ')) return; // indented under config:
+      inConfig = false;
+      // config.X: value lines (top-level config)
+      if (line.startsWith('config.')) {
+        const m = line.match(/^config\.([\w.]+)\s*:\s*(.+)$/);
+        if (m) try { set('config.' + m[1], new Function('return ' + m[2])()); } catch(e) {}
+        return;
+      }
+      const colonIdx = line.indexOf(':');
+      if (colonIdx === -1) return;
+      const varName = line.substring(0, colonIdx).trim();
+      let varValue = line.substring(colonIdx + 1).trim();
+      // Handle conditional: name (condition): value
+      const condMatch = varName.match(/^(.+?)\s*\((.+)\)\s*$/);
+      if (condMatch) {
+        try { if (new Function('return ' + condMatch[2])()) set(condMatch[1], new Function('return ' + varValue)()); } catch(e) {}
+      } else {
+        try { set(varName, new Function('return ' + varValue)()); } catch(e) { set(varName, varValue); }
+      }
+    });
+  }
+
+  // Split body into blocks (text and modifiers)
+  const modifierPattern = /^\[([^[].+[^\\]])\]$/gm;
+  let match, lastIndex = 0;
+  const rawBlocks = [];
+
+  while ((match = modifierPattern.exec(bodySection)) !== null) {
+    if (match.index > lastIndex) {
+      rawBlocks.push({ type: 'text', content: bodySection.substring(lastIndex, match.index) });
+    }
+    rawBlocks.push({ type: 'modifier', content: match[1] });
+    lastIndex = modifierPattern.lastIndex;
+  }
+  if (lastIndex < bodySection.length) {
+    rawBlocks.push({ type: 'text', content: bodySection.substring(lastIndex) });
+  }
+
+  // Process modifiers and build final blocks
+  let conditionStack = []; // stack of {active, wasTrue} for nested [if]/[/if]
+  let conditionState = null; // current condition result (true/false/null)
+
+  rawBlocks.forEach(block => {
+    if (block.type === 'modifier') {
+      const mod = block.content.trim();
+      // Closing tag [/if] [/unless] [/]
+      if (mod === '/if' || mod === '/unless' || mod === '/') {
+        conditionStack.pop();
+        conditionState = conditionStack.length > 0 ? conditionStack[conditionStack.length - 1].active : null;
+        return;
+      }
+      const ifMatch = mod.match(/^if\s+(.+)$/);
+      const unlessMatch = mod.match(/^unless\s+(.+)$/);
+      const elseMatch = mod.match(/^else$/);
+
+      if (elseMatch) {
+        if (conditionStack.length > 0) {
+          const top = conditionStack[conditionStack.length - 1];
+          top.active = !top.active;
+          conditionState = top.active;
+        }
+      } else if (ifMatch) {
+        let result = false;
+        try { result = new Function('return ' + ifMatch[1])(); } catch(e) {}
+        conditionStack.push({ active: result, wasTrue: result });
+        conditionState = result;
+      } else if (unlessMatch) {
+        let result = false;
+        try { result = new Function('return ' + unlessMatch[1])(); } catch(e) {}
+        conditionStack.push({ active: !result, wasTrue: !result });
+        conditionState = !result;
+      }
+    } else {
+      // Text block: render only if condition is true (or no condition)
+      if (conditionState === false) return;
+      if (block.content.trim()) {
+        result.blocks.push({ type: 'text', content: processInlineModifiers(block.content) });
+      }
+    }
+  });
+
+  return result;
+}
+
+// Process inline [if]...[/if] or [if]...[/] within a text block
+function processInlineModifiers(text) {
+  // [if cond]...[/if] or [if cond]...[/]
+  return text.replace(/\[if\s+([^\]]+)\]([\s\S]*?)\[(?:\/if|\/)\]/g, (match, cond, body) => {
+    try {
+      if (!new Function('return ' + cond)()) return '';
+    } catch(e) { return ''; }
+    return body.replace(/\[else\]/g, '');
+  }).replace(/\[unless\s+([^\]]+)\]([\s\S]*?)\[(?:\/unless|\/)\]/g, (match, cond, body) => {
+    try {
+      if (new Function('return ' + cond)()) return '';
+    } catch(e) { return ''; }
+    return body.replace(/\[else\]/g, '');
+  });
+}
+
+// ── Markdown-like rendering ──
+function renderText(text) {
+  if (!text) return '';
+  // Variable interpolation: {varname}
+  text = text.replace(/\{([^}]+)\}/g, (match, expr) => {
+    expr = expr.trim();
+    if (expr === 'back link') {
+      if (trail.length > 1) {
+        const prev = trail[trail.length - 2];
+        return '<a href="javascript:void(0)" data-cb-go="' + prev + '">Back</a>';
+      }
+      return '<a href="javascript:void(0)" data-cb-go="' + trail[0] + '">Back</a>';
+    }
+    const val = get(expr);
+    if (val !== undefined) return val;
+    // Try evaluating as JS expression (e.g. story.state.get('x', 0))
+    try { return new Function('return ' + expr)(); } catch(e) {}
+    return match;
+  });
+  // Links: [[text->passage]] or [[passage]]
+  text = text.replace(/\[\[([^\]]+?)\]\]/g, (match, inner) => {
+    let label, target;
+    if (inner.indexOf('->') !== -1) {
+      const parts = inner.split('->');
+      label = parts[0].trim();
+      target = parts.slice(1).join('->').trim();
+    } else {
+      label = target = inner.trim();
+    }
+    return '<a href="javascript:void(0)" data-cb-go="' + target + '">' + label + '</a>';
+  });
+  // Blockquote (fork): lines starting with >
+  text = text.replace(/^>\s*(.+)$/gm, '<div class="fork">$1</div>');
+  // Headings
+  text = text.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+  text = text.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Horizontal rule
+  text = text.replace(/^---+$/gm, '<hr>');
+  // Line breaks
+  text = text.replace(/\n\n/g, '</p><p>');
+  text = text.replace(/\n/g, '<br>');
+  return '<p>' + text + '</p>';
+}
+
+// ── Display ──
+function go(passageName) {
+  const el = document.querySelector('tw-passage[id="passage-' + passageName + '"]');
+  if (!el) {
+    document.getElementById('page').innerHTML = '<article><p>Passage not found: ' + passageName + '</p></article>';
+    return;
+  }
+  trail.push(passageName);
+
+  const source = el.getAttribute('data-source') || el.textContent || '';
+  const parsed = parsePassage(source);
+  let html = '';
+  parsed.blocks.forEach(b => { html += renderText(b.content); });
+
+  const article = document.querySelector('#page article') || document.querySelector('#page');
+  article.innerHTML = '<tw-passage class="passage" id="passage-display">' + html + '</tw-passage>';
+
+  // Bind links
+  article.querySelectorAll('a[data-cb-go]').forEach(a => {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      go(this.getAttribute('data-cb-go'));
+    });
+  });
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+function restart() {
+  trail.length = 0;
+  // Re-init state
+  Object.keys(state).forEach(k => delete state[k]);
+  // Set defaults from first passage
+  const startEl = document.querySelector('tw-passage[name="Start"]');
+  if (startEl) parsePassage(startEl.getAttribute('data-source') || '');
+  go('Start');
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', function() {
+  const storyData = document.querySelector('tw-storydata');
+  if (!storyData) { document.body.innerHTML = '<p>No story data found.</p>'; return; }
+
+  // Process all passages to set variables
+  storyData.querySelectorAll('tw-passage').forEach(el => {
+    const src = el.getAttribute('data-source') || '';
+    const parts = src.split(/^--$/m);
+    if (parts.length >= 2) {
+      let inConfig = false;
+      parts[0].split('\n').forEach(line => {
+        line = line.trim();
+        if (!line) { inConfig = false; return; }
+        if (line === 'config:') { inConfig = true; return; }
+        if (inConfig && line.startsWith(' ')) return;
+        inConfig = false;
+        if (line.startsWith('config.')) {
+          const m = line.match(/^config\.([\w.]+)\s*:\s*(.+)$/);
+          if (m) try { set('config.' + m[1], new Function('return ' + m[2])()); } catch(e) {}
+          return;
+        }
+        const colonIdx = line.indexOf(':');
+        if (colonIdx === -1) return;
+        const varName = line.substring(0, colonIdx).trim();
+        const varValue = line.substring(colonIdx + 1).trim();
+        try { set(varName, new Function('return ' + varValue)()); } catch(e) { set(varName, varValue); }
+      });
+    }
+  });
+
+  // Apply user stylesheet
+  const userStyle = storyData.querySelector('style');
+  if (userStyle) {
+    const style = document.createElement('style');
+    style.textContent = userStyle.textContent;
+    document.head.appendChild(style);
+  }
+
+  // Apply user script
+  const userScript = storyData.querySelector('script');
+  if (userScript) {
+    try { new Function(userScript.textContent)(); } catch(e) {}
+  }
+
+  // Use story.initialPassage if set, otherwise 'Start'
+  const startPassage = get('story.initialPassage') || 'Start';
+  go(startPassage);
+});
+
+window.go = go;
+window.restart = restart;
+})();
+</script>
+<script>
+
+</script>
+</body>
+</html>
