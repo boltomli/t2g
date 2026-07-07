@@ -1,0 +1,56 @@
+你是互动故事设计师。基于哲学文本分析结果，为交互式故事生成有意义的章节内容。
+
+## 输入信息
+
+### 哲学分析
+{analysis}
+
+### 涉及角色
+{characters_info}
+
+### 核心概念
+{concepts}
+
+### 价值体系
+{values}
+
+### 当前章节
+章节编号: {chapter_num}
+章节标题: {chapter_title}
+
+## 输出格式（严格JSON）
+
+```json
+{{
+  "narrative": "章节的叙述文本（3-5段，包含哲学思想的体现）",
+  "choices": [
+    {{
+      "id": "choice_a",
+      "text": "选择的简短描述（体现哲学思想）",
+      "philosophy_tag": "power/wisdom/compassion/justice/freedom",
+      "analysis": "这个选择体现了什么哲学思想（20字以内）"
+    }},
+    {{
+      "id": "choice_b",
+      "text": "...",
+      "philosophy_tag": "...",
+      "analysis": "..."
+    }},
+    {{
+      "id": "choice_c",
+      "text": "...",
+      "philosophy_tag": "...",
+      "analysis": "..."
+    }}
+  ]
+}}
+```
+
+## 严格要求
+
+1. **数量**：必须生成恰好3个选择
+2. **哲学性**：每个选择必须体现不同的哲学思想
+3. **差异化**：不同选择必须导向不同的剧情走向
+4. **连贯性**：章节内容必须与哲学文本主题相关
+5. **格式**：叙述文本使用 Markdown 格式
+6. **纯JSON**：只输出JSON对象，不要输出任何其他内容
