@@ -107,19 +107,19 @@ class QuizGenerator(BaseGenerator):
 
         client = LLMClient()
 
-        # 检查缓存
-        cache_data = {"text_hash": str(hash(text)), "mode": "quiz_analysis"}
+        # 加载 quiz 专用 prompt
+        prompt = self._load_prompt("quiz_analysis.txt")
+        if not prompt:
+            raise FileNotFoundError("quiz_analysis.txt 未找到")
+
+        # 检查缓存（prompt 内容也参与 hash，prompt 改了缓存失效）
+        cache_data = {"text_hash": str(hash(text)), "prompt_hash": str(hash(prompt)), "mode": "quiz_analysis"}
         cache_key = self.cache.get_cache_key(cache_data, prefix="quiz_analysis")
         if not no_cache:
             cached = self.cache.load_from_cache(cache_key)
             if cached and isinstance(cached, dict):
                 print("  [Quiz] 分析缓存命中")
                 return cached
-
-        # 加载 quiz 专用 prompt
-        prompt = self._load_prompt("quiz_analysis.txt")
-        if not prompt:
-            raise FileNotFoundError("quiz_analysis.txt 未找到")
 
         # 分块分析（文本可能很长）
         chunk_size = 8000
@@ -382,6 +382,7 @@ class QuizGenerator(BaseGenerator):
 
         # 缓存
         cache_data = {"analysis_hash": str(hash(json.dumps(analysis, sort_keys=True))),
+                       "prompt_hash": str(hash(prompt)),
                        "mode": "comprehensive"}
         cache_key = self.cache.get_cache_key(cache_data, prefix="quiz_bank")
         cached = self.cache.load_from_cache(cache_key)

@@ -747,6 +747,7 @@ def main():
 
     # 生成游戏
     try:
+        compiled = False
         # Quiz 支持直接从文本生成
         if args.type == "quiz" and args.text_file and QuizGenerator is not None:
             text = Path(args.text_file).read_text(encoding="utf-8")
@@ -774,6 +775,7 @@ def main():
                             html_path = twee_file.with_suffix(".html")
                             mod.compile_twee(twee_file, html_path)
                             print(f"[OK] 编译完成: {html_path}")
+                        compiled = True
                     else:
                         raise ImportError("无法加载 compile_twee 模块")
                 except Exception as e:
@@ -811,7 +813,7 @@ def main():
                 project_path = str(new_path)
         
         # Twine/Quiz 类型自动编译为 HTML
-        if args.type in ("twine", "quiz"):
+        if not compiled and args.type in ("twine", "quiz"):
             project_dir = Path(project_path)
             twee_files = list(project_dir.glob("*.twee"))
             if twee_files:
