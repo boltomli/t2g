@@ -116,7 +116,10 @@ class QuizGenerator(BaseGenerator):
             raise FileNotFoundError("quiz_analysis.txt 未找到")
 
         # 检查缓存（prompt 内容也参与 hash，prompt 改了缓存失效）
-        cache_data = {"text_hash": str(hash(text)), "prompt_hash": str(hash(prompt)), "mode": "quiz_analysis"}
+        import hashlib
+        text_hash = hashlib.md5(text.encode("utf-8")).hexdigest()
+        prompt_hash = hashlib.md5(prompt.encode("utf-8")).hexdigest()
+        cache_data = {"text_hash": text_hash, "prompt_hash": prompt_hash, "mode": "quiz_analysis"}
         cache_key = self.cache.get_cache_key(cache_data, prefix="quiz_analysis")
         if not no_cache:
             cached = self.cache.load_from_cache(cache_key)
@@ -385,8 +388,11 @@ class QuizGenerator(BaseGenerator):
         )
 
         # 缓存
-        cache_data = {"analysis_hash": str(hash(json.dumps(analysis, sort_keys=True))),
-                       "prompt_hash": str(hash(prompt)),
+        import hashlib
+        analysis_hash = hashlib.md5(json.dumps(analysis, sort_keys=True).encode("utf-8")).hexdigest()
+        prompt_hash = hashlib.md5(prompt.encode("utf-8")).hexdigest()
+        cache_data = {"analysis_hash": analysis_hash,
+                       "prompt_hash": prompt_hash,
                        "mode": "comprehensive"}
         cache_key = self.cache.get_cache_key(cache_data, prefix="quiz_bank")
         cached = self.cache.load_from_cache(cache_key)
