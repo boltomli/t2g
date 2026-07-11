@@ -273,6 +273,9 @@ class QuizGenerator(BaseGenerator):
 
         # ── 题库 ──
         bank_path = project_path / self.BANK_FILENAME
+        if no_cache and bank_path.exists():
+            bank_path.unlink()
+            print(f"[Quiz] 已删除旧题库: {bank_path}")
         if pre_sampled:
             # 从外部抽题，不需要生成题库
             questions = pre_sampled
