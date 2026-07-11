@@ -825,9 +825,6 @@ class QuizGenerator(BaseGenerator):
     # ── Start ──
     def _build_start_source(self, title: str, total_bank: int, quiz_size: int) -> str:
         return f"""--
-score: 0
-correct: 0
-wrong: 0
 current_idx: 0
 quiz_size: {quiz_size}
 
@@ -861,14 +858,7 @@ quiz_size: {quiz_size}
 > [[✓ 正确->{qid}_True]]
 > [[✗ 错误->{qid}_False]]"""
 
-        true_feedback = f"""[if true]
-correct = correct + 1
-[/]
-[if true]
-score = score + 1
-[/]
-
-**✓ 回答正确！** (+1分)
+        true_feedback = f"""**✓ 回答正确！**
 
 {explanation}
 
@@ -878,11 +868,7 @@ score = score + 1
 
 > [[下一题->javascript:goNext()]]"""
 
-        false_feedback = f"""[if true]
-wrong = wrong + 1
-[/]
-
-**✗ 回答错误**
+        false_feedback = f"""**✗ 回答错误**
 
 正确答案：**{"正确" if is_correct else "错误"}**
 
@@ -925,14 +911,7 @@ wrong = wrong + 1
         for label in sorted(options.keys()):
             is_correct = (label == correct)
             if is_correct:
-                fb = f"""[if true]
-correct = correct + 1
-[/]
-[if true]
-score = score + 1
-[/]
-
-**✓ 回答正确！** (+1分)
+                fb = f"""**✓ 回答正确！**
 
 正确答案：**{label}. {options[label]}**
 
@@ -944,11 +923,7 @@ score = score + 1
 
 > [[下一题->javascript:goNext()]]"""
             else:
-                fb = f"""[if true]
-wrong = wrong + 1
-[/]
-
-**✗ 回答错误**
+                fb = f"""**✗ 回答错误**
 
 正确答案：**{correct}. {options.get(correct, '')}**
 
@@ -994,14 +969,7 @@ wrong = wrong + 1
 <div class="quiz-submit"><button class="quiz-btn" onclick="submitMulti(this)">提交答案</button></div>
 </div>"""
 
-        correct_fb = f"""[if true]
-correct = correct + 1
-[/]
-[if true]
-score = score + 1
-[/]
-
-**✓ 回答正确！** (+1分)
+        correct_fb = f"""**✓ 回答正确！**
 
 {explanation}
 
@@ -1011,11 +979,7 @@ score = score + 1
 
 > [[下一题->javascript:goNext()]]"""
 
-        wrong_fb = f"""[if true]
-wrong = wrong + 1
-[/]
-
-**✗ 回答错误**
+        wrong_fb = f"""**✗ 回答错误**
 
 正确答案：**{', '.join(sorted(correct))}**
 
@@ -1037,32 +1001,9 @@ wrong = wrong + 1
     def _build_results_source(self, quiz_size: int) -> str:
         return f"""## 答题完成！
 
----
+本次共回答 **{quiz_size}** 道题目。
 
-**你的成绩**
-
-- 本次题数：{{story.state.get('quiz_size', {quiz_size})}}
-- 正确：{{story.state.get('correct', 0)}}
-- 错误：{{story.state.get('wrong', 0)}}
-- 得分：{{story.state.get('score', 0)}} / {{story.state.get('quiz_size', {quiz_size})}}
-
----
-
-**正确率**：{{Math.round(story.state.get('correct', 0) / story.state.get('quiz_size', {quiz_size}) * 100)}}%
-
----
-
-[if story.state.get('correct', 0) == story.state.get('quiz_size', {quiz_size})]
-**满分！全部答对！太厉害了！**
-[/]
-
-[if story.state.get('correct', 0) > 0 && story.state.get('correct', 0) < story.state.get('quiz_size', {quiz_size})]
-继续加油，争取下次全对！
-[/]
-
-[if story.state.get('correct', 0) == 0]
-别灰心，多复习材料内容再试一次吧！
-[/]
+每道题的反馈中已包含正确答案和解析，可以回顾复习。
 
 ---
 
@@ -1129,9 +1070,6 @@ function startQuiz() {{
   var queue = shuffle(ALL_QIDS).slice(0, QUIZ_SIZE);
   story.state.set('queue', queue);
   story.state.set('current_idx', 0);
-  story.state.set('score', 0);
-  story.state.set('correct', 0);
-  story.state.set('wrong', 0);
   story.state.set('quiz_size', queue.length);
   go(queue[0]);
 }}
