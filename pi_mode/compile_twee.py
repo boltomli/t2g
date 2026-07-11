@@ -220,6 +220,11 @@ function renderText(text) {
 
 // ── Display ──
 function go(passageName) {
+  // 支持 javascript: 协议链接
+  if (passageName && passageName.indexOf('javascript:') === 0) {
+    try { new Function(passageName.slice(11))(); } catch(e) { console.error(e); }
+    return;
+  }
   const el = document.querySelector('tw-passage[id="passage-' + passageName + '"]');
   if (!el) {
     document.getElementById('page').innerHTML = '<article><p>Passage not found: ' + passageName + '</p></article>';
