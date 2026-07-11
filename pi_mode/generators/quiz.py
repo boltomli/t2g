@@ -403,7 +403,7 @@ class QuizGenerator(BaseGenerator):
         total_points = len(concepts) + len(facts) + len(causes) + len(comparisons) + len(processes) + len(principles)
         messages = [
             {"role": "system", "content": prompt},
-            {"role": "user", "content": f"材料包含 {total_points} 个知识点，请为每个知识点生成至少2道题（1道判断+1道单选），并额外生成多选题。尽可能多生成。"},
+            {"role": "user", "content": f"材料包含 {total_points} 个知识点，请为每个知识点生成至少3道题（1道判断+1道单选+1道多选或额外判断）。目标 {total_points * 3} 道题。不要合并知识点，每个知识点单独出题。"},
         ]
         print(f"  [Quiz] 调用 LLM 生成题库（{total_points} 个知识点）...")
         response = self.llm.chat_completion(messages)
@@ -1292,6 +1292,29 @@ def main():
         else:
             parser.print_help()
             return
+
+        # 自动编译 Twee → HTML
+        if path:
+            project_dir = Path(path)
+            twee_files = list(project_dir.glob("*.twee"))
+            if twee_files:
+                print(f"\n正在编译 Twee 文件...")
+                try:
+                    compile_path = Path(__file__).parent.parent / "compile_twee.py"
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("compile_twee", compile_path)
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        for twee_file in twee_files:
+                            html_path = twee_file.with_suffix(".html")
+                            mod.compile_twee(twee_file, html_path)
+                            print(f"[OK] 编译完成: {html_path}")
+                    else:
+                        raise ImportError("无法加载 compile_twee 模块")
+                except Exception as e:
+                    print(f"[WARN] 自动编译失败: {e}")
+                    print(f"  手动编译: uv run python pi_mode/compile_twee.py {path}")
 
         print(f"\nOK 生成完成: {path}")
         print(f"  编译: uv run python pi_mode/compile_twee.py {path}")
