@@ -758,6 +758,27 @@ def main():
                 use_llm=not args.no_llm,
                 num_questions=args.questions,
             )
+            # quiz from-text 自动编译
+            project_dir = Path(project_path)
+            twee_files = list(project_dir.glob("*.twee"))
+            if twee_files:
+                print(f"\n正在编译 Twee 文件...")
+                try:
+                    compile_path = Path(__file__).parent / "compile_twee.py"
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("compile_twee", compile_path)
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        for twee_file in twee_files:
+                            html_path = twee_file.with_suffix(".html")
+                            mod.compile_twee(twee_file, html_path)
+                            print(f"[OK] 编译完成: {html_path}")
+                    else:
+                        raise ImportError("无法加载 compile_twee 模块")
+                except Exception as e:
+                    print(f"[WARN] 自动编译失败: {e}")
+                    print(f"  手动编译: uv run python pi_mode/compile_twee.py {project_path}")
         elif args.type == "quiz" and QuizGenerator is not None:
             quiz_gen = QuizGenerator(str(args.output))
             if args.no_cache:

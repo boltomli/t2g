@@ -1282,7 +1282,7 @@ def main():
             return
 
         print(f"\nOK 生成完成: {path}")
-        print(f"  编译: uv run python pi_mode/compile_twee.py {path}/*.twee")
+        print(f"  编译: uv run python pi_mode/compile_twee.py {path}")
 
     except Exception as e:
         print(f"错误: {e}")
