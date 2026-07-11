@@ -789,6 +789,7 @@ def main():
             project_path = quiz_gen.generate(
                 args.analysis, output_name=args.name,
                 use_llm=not args.no_llm, num_questions=args.questions,
+                no_cache=args.no_cache,
             )
         else:
             game_config = {}

@@ -31,7 +31,8 @@ class QuizGenerator(BaseGenerator):
     # ═══════════════════════════════════════════════════════════════
 
     def generate(self, analysis_file: str, output_name: Optional[str] = None,
-                 use_llm: bool = True, num_questions: int = 10) -> str:
+                 use_llm: bool = True, num_questions: int = 10,
+                 no_cache: bool = False) -> str:
         """从 analysis.json 生成 quiz（原有路径）"""
         analysis = self._load_analysis(analysis_file)
         analysis_data = analysis.get("analysis", analysis)
@@ -43,6 +44,7 @@ class QuizGenerator(BaseGenerator):
             source_label=analysis_file,
             use_llm=use_llm,
             num_questions=num_questions,
+            no_cache=no_cache,
         )
 
     def generate_from_text(self, text: str, output_name: str = "quiz",
@@ -64,6 +66,7 @@ class QuizGenerator(BaseGenerator):
             source_label="direct_text",
             use_llm=use_llm,
             num_questions=num_questions,
+            no_cache=no_cache,
         )
 
     def sample_from_bank(self, bank_path: str, num_questions: int = 10,
@@ -242,6 +245,7 @@ class QuizGenerator(BaseGenerator):
     def _generate_quiz(self, analysis_data: Dict, game_name: str,
                        source_label: str, use_llm: bool,
                        num_questions: int,
+                       no_cache: bool = False,
                        pre_sampled: Optional[List[Dict]] = None) -> str:
         """核心生成流程：题库 → 抽题 → Twee"""
         project_path = self.output_dir / game_name
@@ -270,7 +274,7 @@ class QuizGenerator(BaseGenerator):
             # 从外部抽题，不需要生成题库
             questions = pre_sampled
             bank = []
-        elif bank_path.exists():
+        elif bank_path.exists() and not no_cache:
             # 已有题库，直接抽题
             bank = self._load_question_bank(str(bank_path))
             questions = self._sample_questions(bank, num_questions)
@@ -1265,6 +1269,7 @@ def main():
             path = generator.generate(
                 args.analysis, output_name=args.name,
                 use_llm=not args.no_llm, num_questions=args.questions,
+                no_cache=no_cache,
             )
         elif args.command == "from-text":
             text = Path(args.text_file).read_text(encoding="utf-8")
