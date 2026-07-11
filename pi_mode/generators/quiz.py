@@ -403,7 +403,7 @@ class QuizGenerator(BaseGenerator):
         total_points = len(concepts) + len(facts) + len(causes) + len(comparisons) + len(processes) + len(principles)
         messages = [
             {"role": "system", "content": prompt},
-            {"role": "user", "content": f"材料包含 {total_points} 个知识点，请为每个知识点生成至少3道题（1道判断+1道单选+1道多选或额外判断）。目标 {total_points * 3} 道题。不要合并知识点，每个知识点单独出题。"},
+            {"role": "user", "content": f"材料包含 {total_points} 个知识点，请为每个知识点生成至少2道题（1道判断+1道单选），多选题可跨知识点。总共不少于 {total_points * 2} 道题。不要合并知识点，每个知识点单独出题。"},
         ]
         print(f"  [Quiz] 调用 LLM 生成题库（{total_points} 个知识点）...")
         response = self.llm.chat_completion(messages)
