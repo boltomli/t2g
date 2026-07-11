@@ -840,7 +840,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[开始答题->javascript:startQuiz()]]"""
+> [[开始答题->javascript:startQuiz()]]
+> [[无尽模式->javascript:startEndless()]]"""
 
     # ── 判断题 ──
     def _build_tf_passage(self, q: Dict, qid: str) -> List[Dict]:
@@ -866,7 +867,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[下一题->javascript:goNext()]]"""
+> [[下一题->javascript:goNext()]]
+> [[退出->javascript:exitQuiz()]]"""
 
         false_feedback = f"""**✗ 回答错误**
 
@@ -878,7 +880,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[下一题->javascript:goNext()]]"""
+> [[下一题->javascript:goNext()]]
+> [[退出->javascript:exitQuiz()]]"""
 
         return [
             {"name": qid, "tags": ["question", "true_false"], "source": q_source},
@@ -921,7 +924,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[下一题->javascript:goNext()]]"""
+> [[下一题->javascript:goNext()]]
+> [[退出->javascript:exitQuiz()]]"""
             else:
                 fb = f"""**✗ 回答错误**
 
@@ -935,7 +939,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[下一题->javascript:goNext()]]"""
+> [[下一题->javascript:goNext()]]
+> [[退出->javascript:exitQuiz()]]"""
 
             passages.append({
                 "name": f"{qid}_{label}",
@@ -977,7 +982,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[下一题->javascript:goNext()]]"""
+> [[下一题->javascript:goNext()]]
+> [[退出->javascript:exitQuiz()]]"""
 
         wrong_fb = f"""**✗ 回答错误**
 
@@ -989,7 +995,8 @@ quiz_size: {quiz_size}
 
 ---
 
-> [[下一题->javascript:goNext()]]"""
+> [[下一题->javascript:goNext()]]
+> [[退出->javascript:exitQuiz()]]"""
 
         return [
             {"name": qid, "tags": ["question", "multiple_choice"], "source": q_source},
@@ -1067,6 +1074,16 @@ function shuffle(arr) {{
 }}
 
 function startQuiz() {{
+  story.state.set('endless', false);
+  var queue = shuffle(ALL_QIDS).slice(0, QUIZ_SIZE);
+  story.state.set('queue', queue);
+  story.state.set('current_idx', 0);
+  story.state.set('quiz_size', queue.length);
+  go(queue[0]);
+}}
+
+function startEndless() {{
+  story.state.set('endless', true);
   var queue = shuffle(ALL_QIDS).slice(0, QUIZ_SIZE);
   story.state.set('queue', queue);
   story.state.set('current_idx', 0);
@@ -1077,12 +1094,26 @@ function startQuiz() {{
 function goNext() {{
   var idx = story.state.get('current_idx', 0) + 1;
   var queue = story.state.get('queue', []);
-  story.state.set('current_idx', idx);
+  var endless = story.state.get('endless', false);
   if (idx >= queue.length) {{
-    go('Results');
+    if (endless) {{
+      // 无尽模式：重新洗牌继续
+      queue = shuffle(ALL_QIDS).slice(0, QUIZ_SIZE);
+      story.state.set('queue', queue);
+      story.state.set('current_idx', 0);
+      go(queue[0]);
+    }} else {{
+      go('Results');
+    }}
   }} else {{
+    story.state.set('current_idx', idx);
     go(queue[idx]);
   }}
+}}
+
+function exitQuiz() {{
+  story.state.set('endless', false);
+  go('Start');
 }}
 
 function restartQuiz() {{
