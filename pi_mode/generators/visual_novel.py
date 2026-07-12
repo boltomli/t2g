@@ -5,18 +5,18 @@
 """
 
 import json
-import os
-import random
-import shutil
+import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
+
+# 确保项目根目录在 sys.path 中（支持直接运行）
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 # 导入共享基础模块
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
-from base import BaseGenerator, LLMClient, CacheManager
+from pi_mode.generators.base import BaseGenerator, LLMClient
 
 class VisualNovelGenerator(BaseGenerator):
     """视觉小说游戏生成器 - 充分利用分析结果中的所有数据，支持LLM分支剧情"""
@@ -52,7 +52,7 @@ class VisualNovelGenerator(BaseGenerator):
         else:
             print(f"[VN] LLM不可用，使用模板生成分支（回退模式）")
 
-        analysis_data = analysis.get("analysis", analysis)
+        analysis_data = self._unwrap_analysis(analysis)
         recommended = analysis.get("recommended_types", [])
         vn_features = self._extract_vn_features(recommended)
 
@@ -80,14 +80,6 @@ class VisualNovelGenerator(BaseGenerator):
 
         print(f"[VN] OK 生成完成: {project_path}")
         return str(project_path)
-
-    # ──────────────────────────── LLM提示词加载 ────────────────────────────
-    def _load_prompt(self, filename: str) -> str:
-        """加载提示词文件"""
-        prompt_file = self.prompts_dir / filename
-        if prompt_file.exists():
-            return prompt_file.read_text(encoding="utf-8")
-        return ""
 
     # ──────────────────────────── LLM大纲生成 ────────────────────────────
     def _generate_outline(self, analysis: Dict) -> Optional[Dict]:
@@ -643,56 +635,13 @@ class VisualNovelGenerator(BaseGenerator):
         print(f"  [LLM] {max_retries}次尝试均失败，回退到模板模式")
         return None
 
-    @staticmethod
-    def _parse_llm_json(content: str) -> Optional[Dict]:
-        """解析LLM返回的JSON（带容错）"""
-        content = content.strip()
-        # 移除markdown代码块
-        if content.startswith("```"):
-            lines = content.split("\n", 1)
-            content = lines[1] if len(lines) > 1 else content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-
-        # 直接解析
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-
-        # 提取JSON对象
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        if start >= 0 and end > start:
-            try:
-                return json.loads(content[start:end])
-            except json.JSONDecodeError:
-                pass
-
-        return None
-
     # ──────────────────────────── 数据加载 ────────────────────────────
-    def _load_analysis(self, path: str) -> Dict:
-        p = Path(path)
-        if not p.exists():
-            raise FileNotFoundError(f"分析文件不存在: {path}")
-        return json.loads(p.read_text(encoding="utf-8"))
+    # _load_analysis 和 _derive_name 继承自 BaseGenerator，
+    # _derive_name 通过 suffix="_vn" 实现同名后缀。
 
     def _derive_name(self, analysis: Dict, analysis_file: str = "") -> str:
-        # 优先用源文件名
-        if analysis_file:
-            src = analysis.get("source_file", analysis_file)
-            stem = Path(src).stem
-            # 清理文件名
-            name = "".join(c for c in stem if c.isalnum() or c in "_- ")
-            if name:
-                return name + "_vn"
-        # fallback: 世界名
-        data = analysis.get("analysis", analysis)
-        name = data.get("world", {}).get("name", "VisualNovel")
-        name = "".join(c for c in name if c.isalnum() or c in "_- ")
-        return (name or "VisualNovel") + "_vn"
+        """重写以添加 _vn 后缀"""
+        return super()._derive_name(analysis, analysis_file, suffix="_vn")
 
     def _extract_vn_features(self, recommended: List[Dict]) -> List[str]:
         for r in recommended:

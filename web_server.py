@@ -5,10 +5,8 @@ Text2Game Web Server
 """
 
 import json
-import os
 import sys
 import uuid
-import tempfile
 import threading
 import time
 from http.server import HTTPServer, SimpleHTTPRequestHandler

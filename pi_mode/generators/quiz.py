@@ -7,13 +7,17 @@ Quiz 问答游戏生成器
 
 import json
 import random
-import uuid
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent))
-from base import BaseGenerator, LLMClient, CacheManager
+# 确保项目根目录在 sys.path 中（支持直接运行）
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from pi_mode.generators.base import BaseGenerator, LLMClient
+from pi_mode.shared import compile_twee_files
 
 
 class QuizGenerator(BaseGenerator):
@@ -35,7 +39,7 @@ class QuizGenerator(BaseGenerator):
                  no_cache: bool = False) -> str:
         """从 analysis.json 生成 quiz（原有路径）"""
         analysis = self._load_analysis(analysis_file)
-        analysis_data = analysis.get("analysis", analysis)
+        analysis_data = self._unwrap_analysis(analysis)
         game_name = output_name or self._derive_name(analysis, analysis_file, suffix="_quiz")
 
         return self._generate_quiz(
@@ -105,9 +109,6 @@ class QuizGenerator(BaseGenerator):
 
     def _analyze_with_llm(self, text: str, no_cache: bool = False) -> Dict:
         """用 LLM + quiz 专用 prompt 分析文本"""
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-        from base import LLMClient
-
         client = LLMClient()
 
         # 加载 quiz 专用 prompt
@@ -1164,37 +1165,8 @@ function submitMulti(btn) {{
     # ═══════════════════════════════════════════════════════════════
     #  Twee 渲染
     # ═══════════════════════════════════════════════════════════════
-
-    def _render_twee(self, story: Dict) -> str:
-        parts = [
-            self._render_story_data(story),
-            f":: Story stylesheet\n{story.get('stylesheet', '')}",
-            f":: Story script\n{story.get('javascript', '')}",
-        ]
-        for passage in story.get("passages", []):
-            parts.append(self._render_passage(passage))
-        return "\n\n".join(parts) + "\n"
-
-    def _render_story_data(self, story: Dict) -> str:
-        title = story.get("title", "Quiz")
-        meta = {
-            "tags": "", "color": "#000000", "name": title,
-            "format-version": "2.0.0", "format": "Chapbook",
-            "uuid": str(uuid.uuid4()),
-        }
-        return f":: StoryData\n{json.dumps(meta, ensure_ascii=False, indent=2)}"
-
-    def _render_passage(self, passage: Dict) -> str:
-        name = passage.get("name", "Untitled")
-        tags = passage.get("tags", [])
-        source = passage.get("source", "")
-        if any(c in name for c in '[]{}():|"'):
-            name = f'"{name}"'
-        tag_str = " ".join(tags)
-        header = f":: {name}"
-        if tag_str:
-            header += f" [{tag_str}]"
-        return f"{header}\n{source}"
+    # _render_twee / _render_story_data / _render_passage 继承自 BaseGenerator，
+    # 统一了 Twine 和 Quiz 的 Twee 格式输出。
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1265,28 +1237,9 @@ def main():
             parser.print_help()
             return
 
-        # 自动编译 Twee → HTML
+        # 自动编译 Twee → HTML（使用共享编译函数）
         if path:
-            project_dir = Path(path)
-            twee_files = list(project_dir.glob("*.twee"))
-            if twee_files:
-                print(f"\n正在编译 Twee 文件...")
-                try:
-                    compile_path = Path(__file__).parent.parent / "compile_twee.py"
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location("compile_twee", compile_path)
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        for twee_file in twee_files:
-                            html_path = twee_file.with_suffix(".html")
-                            mod.compile_twee(twee_file, html_path)
-                            print(f"[OK] 编译完成: {html_path}")
-                    else:
-                        raise ImportError("无法加载 compile_twee 模块")
-                except Exception as e:
-                    print(f"[WARN] 自动编译失败: {e}")
-                    print(f"  手动编译: uv run python pi_mode/compile_twee.py {path}")
+            compile_twee_files(path)
 
         print(f"\nOK 生成完成: {path}")
         print(f"  编译: uv run python pi_mode/compile_twee.py {path}")

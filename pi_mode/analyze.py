@@ -2,17 +2,38 @@
 """
 Text2Game - 文本分析器
 使用LM Studio API分析文本内容，支持分块处理、重试机制和进度显示
+
+LLM 客户端、JSON 解析和环境配置统一由 pi_mode.shared 提供，
+本模块专注于文本分析、分块、合并和推荐逻辑。
 """
 
 import argparse
 import json
-import requests
 import sys
 import time
-import os
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
+
+# 确保项目根目录在 sys.path 中（支持直接运行 python pi_mode/analyze.py）
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+# 从 shared 模块导入统一的 LLM 客户端和配置
+from pi_mode.shared import (
+    LLMClient,
+    parse_llm_json,
+    DEFAULT_API_URL,
+    DEFAULT_MODEL,
+    DEFAULT_API_KEY,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_TIMEOUT,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_ENABLE_REASONING,
+)
 
 # 日志和进度条
 try:
@@ -47,117 +68,6 @@ except ImportError:
         def set_description(self, s): self.desc = s
         @staticmethod
         def write(msg): print(msg)  # tqdm.write兼容
-
-# 尝试加载 dotenv
-try:
-    from dotenv import load_dotenv
-    # 加载项目根目录的 .env 文件
-    env_path = Path(__file__).parent.parent / '.env'
-    load_dotenv(env_path)
-    print(f"[OK] 已加载配置文件: {env_path}")
-except ImportError:
-    print("提示: 安装 python-dotenv 可支持 .env 配置文件: pip install python-dotenv")
-except Exception as e:
-    print(f"警告: 加载 .env 文件失败: {e}")
-
-# 从环境变量读取配置，默认值作为后备
-DEFAULT_API_URL = os.getenv("LLM_API_URL", "http://localhost:1234/v1")
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "google/gemma-4-12b-qat")
-DEFAULT_API_KEY = os.getenv("LLM_API_KEY", "")
-DEFAULT_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-DEFAULT_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16384"))
-DEFAULT_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "180"))
-DEFAULT_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
-DEFAULT_CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "8000"))
-DEFAULT_ENABLE_REASONING = os.getenv("ENABLE_REASONING", "false").lower() == "true"
-
-
-class LLMClient:
-    """LLM客户端，与LM Studio/OpenAI兼容API通信"""
-    
-    def __init__(self, api_url: str = DEFAULT_API_URL, model: str = DEFAULT_MODEL, api_key: str = DEFAULT_API_KEY):
-        self.api_url = api_url.rstrip("/")
-        self.model = model
-        self.api_key = api_key
-        self.temperature = DEFAULT_TEMPERATURE
-        self.max_tokens = DEFAULT_MAX_TOKENS
-        self.timeout = DEFAULT_TIMEOUT
-        self.max_retries = DEFAULT_MAX_RETRIES
-        self.enable_reasoning = DEFAULT_ENABLE_REASONING
-    
-    def chat_completion(self, messages: List[Dict], response_format: Optional[Dict] = None) -> Dict:
-        """发送聊天请求（带重试）"""
-        url = f"{self.api_url}/chat/completions"
-        
-        body = {
-            "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "stream": False,
-            "reasoning": {"enabled": self.enable_reasoning}
-        }
-        
-        if self.model:
-            body["model"] = self.model
-        
-        if response_format:
-            body["response_format"] = response_format
-        
-        # 构建请求头
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        
-        # 跳过局域网代理
-        proxies = {"http": None, "https": None}
-        
-        last_error = None
-        for attempt in range(self.max_retries):
-            try:
-                print(f"  发送请求... (尝试 {attempt + 1}/{self.max_retries})")
-                response = requests.post(url, json=body, headers=headers, timeout=self.timeout, proxies=proxies)
-                
-                if response.status_code == 200:
-                    return response.json()
-                elif response.status_code in [429, 500, 502, 503]:
-                    # 可重试的错误
-                    print(f"  API错误 {response.status_code}，等待重试...")
-                    time.sleep(3 * (attempt + 1))  # 递增等待
-                    continue
-                else:
-                    # 不可重试的错误
-                    raise Exception(f"API请求失败: HTTP {response.status_code} - {response.text[:200]}")
-                    
-            except requests.exceptions.Timeout:
-                print(f"  请求超时，等待重试...")
-                time.sleep(2 * (attempt + 1))
-                last_error = "请求超时"
-            except requests.exceptions.ConnectionError:
-                print(f"  连接失败，等待重试...")
-                time.sleep(5 * (attempt + 1))
-                last_error = "连接失败"
-            except Exception as e:
-                last_error = str(e)
-                if attempt < self.max_retries - 1:
-                    print(f"  请求失败: {e}，等待重试...")
-                    time.sleep(2 * (attempt + 1))
-        
-        raise Exception(f"请求失败，已重试{self.max_retries}次: {last_error}")
-    
-    def get_models(self) -> List[Dict]:
-        """获取可用模型列表"""
-        url = f"{self.api_url}/models"
-        headers = {}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        proxies = {"http": None, "https": None}
-        try:
-            response = requests.get(url, headers=headers, timeout=10, proxies=proxies)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("data", [])
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"获取模型列表失败: {e}")
 
 
 class TextAnalyzer:
@@ -637,8 +547,8 @@ class TextAnalyzer:
         except Exception as e:
             logger.error(f"API请求失败: {e}")
             return {"_error": str(e)}
-        
-        if not response.get("choices"):
+
+        if not response or not response.get("choices"):
             return {"_error": "无效的LLM响应"}
         
         content = response["choices"][0]["message"]["content"]
@@ -860,7 +770,7 @@ class TextAnalyzer:
         similar_groups = []
         try:
             response = self.client.chat_completion(messages)
-            if response.get("choices"):
+            if response and response.get("choices"):
                 content = response["choices"][0]["message"]["content"]
                 parsed = self._parse_json_response(content)
                 if isinstance(parsed, list):
@@ -956,107 +866,6 @@ class TextAnalyzer:
         }
     
 
-    
-    def _identify_duplicate_characters(self, names: List[str], input_dir: Path) -> List[List[str]]:
-        """让LLM识别可能重复的角色（带缓存）"""
-        # 检查缓存
-        cache_key = self._get_cache_key(json.dumps(sorted(names)), prefix="identify_dups")
-        cached = self._load_from_cache_by_key(input_dir, cache_key)
-        if cached:
-            return cached if isinstance(cached, list) else []
-        
-        logger.info("识别重复角色...")
-        
-        names_text = "\n".join(names)
-        prompt = """以下是角色名称列表。请识别哪些名称可能指的是同一个人（比如"王某"和"王某1"可能是同一人）。
-
-输出格式（严格JSON数组）：
-[["相同角色1a", "相同角色1b"], ["相同角色2a", "相同角色2a_别名"]]
-
-如果没有重复角色，输出空数组 []
-
-角色列表："""
-        
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": names_text}
-        ]
-        
-        result = []
-        try:
-            response = self.client.chat_completion(messages)
-            if response.get("choices"):
-                content = response["choices"][0]["message"]["content"]
-                parsed = self._parse_json_response(content)
-                if isinstance(parsed, list):
-                    result = parsed
-        except Exception as e:
-            logger.warning(f"识别重复角色失败: {e}")
-        
-        # 保存缓存
-        self._save_to_cache_by_key(input_dir, cache_key, result)
-        return result
-    
-    def _group_characters(self, seen: Dict[str, List[Dict]], duplicates: List[List[str]]) -> Dict[str, List[Dict]]:
-        """根据重复识别结果分组角色"""
-        # 构建映射：名字 -> 组名
-        name_to_group = {}
-        for dup_group in duplicates:
-            if isinstance(dup_group, list) and len(dup_group) > 1:
-                # 使用第一个名字作为组名
-                group_name = dup_group[0]
-                for name in dup_group:
-                    if name in seen:
-                        name_to_group[name] = group_name
-        
-        # 分组
-        groups = {}
-        for name, chars in seen.items():
-            group_name = name_to_group.get(name, name)
-            if group_name not in groups:
-                groups[group_name] = []
-            groups[group_name].extend(chars)
-        
-        return groups
-    
-    def _merge_single_character_data(self, name: str, chars: List[Dict], input_dir: Path) -> Dict:
-        """合并单个角色的多个数据来源（带缓存）"""
-        if len(chars) == 1:
-            return chars[0]
-        
-        # 检查缓存
-        cache_key = self._get_cache_key(json.dumps(chars, sort_keys=True), prefix=f"char_{name}")
-        cached = self._load_from_cache_by_key(input_dir, cache_key)
-        if cached:
-            return cached
-        
-        print(f"      合并角色: {name} ({len(chars)}个数据源)...")
-        
-        prompt = f"""合并以下关于角色"{name}"的数据，生成一个完整的角色信息。
-
-输出格式（严格JSON）：
-{{"name": "角色名", "role": "身份", "traits": ["特征"], "background": "背景", "goal": "目标"}}"""
-        
-        chars_text = json.dumps(chars, ensure_ascii=False, indent=2)
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": chars_text}
-        ]
-        
-        result = chars[0]  # 默认返回第一个
-        try:
-            response = self.client.chat_completion(messages)
-            if response.get("choices"):
-                content = response["choices"][0]["message"]["content"]
-                parsed = self._parse_json_response(content)
-                if parsed and isinstance(parsed, dict) and parsed.get("name"):
-                    result = parsed
-        except Exception as e:
-            logger.warning(f"合并角色数据失败: {e}")
-        
-        # 保存缓存
-        self._save_to_cache_by_key(input_dir, cache_key, result)
-        return result
     
     def _merge_conflicts(self, conflicts: List[Dict], input_dir: Path) -> List[Dict]:
         """合并冲突列表（LLM整理）"""
@@ -1211,7 +1020,7 @@ class TextAnalyzer:
         
         try:
             response = self.client.chat_completion(messages)
-            if response.get("choices"):
+            if response and response.get("choices"):
                 content = response["choices"][0]["message"]["content"]
                 if is_string:
                     return content.strip()
@@ -1233,7 +1042,7 @@ class TextAnalyzer:
         
         response = self.client.chat_completion(messages)
         
-        if not response.get("choices"):
+        if not response or not response.get("choices"):
             raise Exception("无效的LLM响应")
         
         content = response["choices"][0]["message"]["content"]
@@ -1246,66 +1055,10 @@ class TextAnalyzer:
         else:
             return [result]
     
-    def _parse_json_response(self, content: str) -> Dict:
-        """解析JSON响应（带容错）"""
-        # 清理内容
-        content = content.strip()
-        
-        # 移除markdown代码块标记
-        if content.startswith("```"):
-            content = content.split("\n", 1)[1] if "\n" in content else content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-        
-        # 首先尝试直接解析
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-        
-        # 尝试提取JSON部分
-        json_start = content.find("{")
-        json_end = content.rfind("}") + 1
-        
-        if json_start >= 0 and json_end > json_start:
-            try:
-                return json.loads(content[json_start:json_end])
-            except json.JSONDecodeError:
-                # 尝试修复不完整的JSON
-                partial = content[json_start:json_end]
-                # 尝试补全缺失的引号和括号
-                try:
-                    # 简单修复：确保字符串正确闭合
-                    fixed = self._try_fix_json(partial)
-                    if fixed:
-                        return fixed
-                except:
-                    pass
-        
-        # 尝试提取JSON数组
-        array_start = content.find("[")
-        array_end = content.rfind("]") + 1
-        
-        if array_start >= 0 and array_end > array_start:
-            try:
-                return json.loads(content[array_start:array_end])
-            except json.JSONDecodeError:
-                pass
-        
-        # 如果都失败了，返回空字典
-        print(f"  [WARN] 无法解析JSON响应")
-        return {}
-    
-    def _try_fix_json(self, text: str) -> Optional[Dict]:
-        """尝试修复不完整的JSON"""
-        # 尝试补全结尾
-        for suffix in ['"}', '"}]', '"]', '}', '}]', '"]']:
-            try:
-                return json.loads(text + suffix)
-            except:
-                continue
-        return None
+    def _parse_json_response(self, content: str) -> Any:
+        """解析JSON响应（带容错），委托给 shared.parse_llm_json"""
+        result = parse_llm_json(content)
+        return result if result is not None else {}
 
 
 def print_config():

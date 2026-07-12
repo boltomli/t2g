@@ -2,105 +2,24 @@
 """
 Text2Game - 分析结果优化器
 根据用户需求对已生成的分析结果JSON进行优化
+
+LLM 客户端、JSON 解析和环境配置统一由 pi_mode.shared 提供。
 """
 
 import argparse
 import json
-import os
 import sys
-import time
-import requests
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# 尝试加载 dotenv
-try:
-    from dotenv import load_dotenv
-    env_path = Path(__file__).parent.parent / '.env'
-    load_dotenv(env_path)
-except ImportError:
-    pass
-except Exception:
-    pass
+# 确保项目根目录在 sys.path 中（支持直接运行）
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
-# 配置
-DEFAULT_API_URL = os.getenv("LLM_API_URL", "http://localhost:1234/v1")
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "google/gemma-4-12b-qat")
-DEFAULT_API_KEY = os.getenv("LLM_API_KEY", "")
-DEFAULT_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-DEFAULT_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16384"))
-DEFAULT_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "600"))
-DEFAULT_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
-DEFAULT_ENABLE_REASONING = os.getenv("ENABLE_REASONING", "false").lower() == "true"
+from pi_mode.shared import LLMClient, parse_llm_json, load_prompt, PROJECT_ROOT
 
-PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
-
-
-class LLMClient:
-    """LLM客户端"""
-
-    def __init__(self):
-        self.api_url = DEFAULT_API_URL.rstrip("/")
-        self.model = DEFAULT_MODEL
-        self.api_key = DEFAULT_API_KEY
-        self.temperature = DEFAULT_TEMPERATURE
-        self.max_tokens = DEFAULT_MAX_TOKENS
-        self.timeout = DEFAULT_TIMEOUT
-        self.max_retries = DEFAULT_MAX_RETRIES
-        self.enable_reasoning = DEFAULT_ENABLE_REASONING
-
-    def chat_completion(self, messages: List[Dict]) -> Dict:
-        url = f"{self.api_url}/chat/completions"
-        body = {
-            "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "stream": False,
-            "reasoning": {"enabled": self.enable_reasoning},
-        }
-        if self.model:
-            body["model"] = self.model
-
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-
-        proxies = {"http": None, "https": None}
-
-        last_error = None
-        for attempt in range(self.max_retries):
-            try:
-                print(f"  发送请求... (尝试 {attempt + 1}/{self.max_retries})")
-                resp = requests.post(url, json=body, headers=headers,
-                                     timeout=self.timeout, proxies=proxies)
-                if resp.status_code == 200:
-                    return resp.json()
-                elif resp.status_code in (429, 500, 502, 503):
-                    print(f"  API错误 {resp.status_code}，等待重试...")
-                    time.sleep(3 * (attempt + 1))
-                    continue
-                else:
-                    raise Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
-            except Exception as e:
-                last_error = str(e)
-                if attempt < self.max_retries - 1:
-                    print(f"  失败: {e}，重试中...")
-                    time.sleep(2 * (attempt + 1))
-
-        raise Exception(f"请求失败（{self.max_retries}次重试）: {last_error}")
-
-    def check_available(self) -> bool:
-        try:
-            import requests as req
-            url = f"{self.api_url}/models"
-            headers = {}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-            proxies = {"http": None, "https": None}
-            resp = req.get(url, headers=headers, timeout=5, proxies=proxies)
-            return resp.status_code == 200
-        except Exception:
-            return False
+PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
 
 def load_analysis(path: str) -> Dict:
@@ -110,42 +29,11 @@ def load_analysis(path: str) -> Dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def load_prompt_template() -> str:
-    prompt_file = PROMPTS_DIR / "optimize.txt"
-    if prompt_file.exists():
-        return prompt_file.read_text(encoding="utf-8")
-    # fallback
-    return "当前分析结果：\n{analysis}\n\n优化需求：\n{requirements}\n\n输出优化后的完整JSON："
-
-
-def parse_llm_json(content: str) -> Optional[Dict]:
-    """解析LLM返回的JSON（带容错）"""
-    content = content.strip()
-    if content.startswith("```"):
-        lines = content.split("\n", 1)
-        content = lines[1] if len(lines) > 1 else content[3:]
-    if content.endswith("```"):
-        content = content[:-3]
-    content = content.strip()
-
-    try:
-        return json.loads(content)
-    except json.JSONDecodeError:
-        pass
-
-    start = content.find("{")
-    end = content.rfind("}") + 1
-    if start >= 0 and end > start:
-        try:
-            return json.loads(content[start:end])
-        except json.JSONDecodeError:
-            pass
-    return None
-
-
 def optimize(analysis: Dict, requirements: str, llm: LLMClient) -> Dict:
     """使用LLM优化分析结果"""
-    template = load_prompt_template()
+    template = load_prompt("optimize.txt")
+    if not template:
+        template = "当前分析结果：\n{analysis}\n\n优化需求：\n{requirements}\n\n输出优化后的完整JSON："
 
     # 压缩analysis为字符串（去掉过多的缩进）
     analysis_str = json.dumps(analysis, ensure_ascii=False, indent=2)
@@ -175,7 +63,7 @@ def optimize(analysis: Dict, requirements: str, llm: LLMClient) -> Dict:
 
     result = parse_llm_json(content)
     if not result:
-        raise Exception(f"无法解析LLM返回的JSON")
+        raise Exception("无法解析LLM返回的JSON")
 
     return result
 

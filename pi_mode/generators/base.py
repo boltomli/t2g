@@ -1,101 +1,27 @@
 #!/usr/bin/env python3
 """
 游戏生成器基础模块
-提供共享的 LLM 客户端、缓存系统和通用方法
+提供共享的 LLM 客户端、缓存系统、Twee 渲染和通用方法。
+
+所有生成器（Twine、VisualNovel、Quiz、Philosophy）均继承此基类，
+通过统一接口访问 LLM、缓存、提示词和上下文构建，消除重复代码。
 """
 
 import hashlib
 import json
-import os
 import time
+import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-# 尝试加载 dotenv
-try:
-    from dotenv import load_dotenv
-    env_path = Path(__file__).parent.parent.parent / '.env'
-    load_dotenv(env_path)
-except ImportError:
-    pass
-except Exception:
-    pass
-
-
-class LLMClient:
-    """轻量 LLM 客户端（共享）"""
-
-    def __init__(self):
-        self.api_url = os.getenv("LLM_API_URL", "http://localhost:1234/v1").rstrip("/")
-        self.model = os.getenv("LLM_MODEL", "google/gemma-4-12b-qat")
-        self.api_key = os.getenv("LLM_API_KEY", "")
-        self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.8"))
-        self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "16384"))
-        self.timeout = int(os.getenv("LLM_TIMEOUT", "600"))
-        self.max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))
-        self.enable_reasoning = os.getenv("ENABLE_REASONING", "false").lower() == "true"
-        self._available: Optional[bool] = None
-
-    def chat_completion(self, messages: List[Dict]) -> Optional[Dict]:
-        """发送聊天请求（带重试）"""
-        try:
-            import requests
-        except ImportError:
-            return None
-
-        url = f"{self.api_url}/chat/completions"
-        body = {
-            "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "stream": False,
-            "reasoning": {"enabled": self.enable_reasoning},
-        }
-        if self.model:
-            body["model"] = self.model
-
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-
-        proxies = {"http": None, "https": None}
-
-        for attempt in range(self.max_retries):
-            try:
-                resp = requests.post(url, json=body, headers=headers,
-                                     timeout=self.timeout, proxies=proxies)
-                if resp.status_code == 200:
-                    return resp.json()
-                elif resp.status_code in (429, 500, 502, 503):
-                    time.sleep(3 * (attempt + 1))
-                    continue
-                else:
-                    print(f"  [LLM] HTTP {resp.status_code}: {resp.text[:200]}")
-                    return None
-            except Exception as e:
-                if attempt < self.max_retries - 1:
-                    print(f"  [LLM] 重试 {attempt+1}/{self.max_retries}: {e}")
-                    time.sleep(2 * (attempt + 1))
-                else:
-                    return None
-        return None
-
-    def check_available(self) -> bool:
-        """快速检测 LLM 是否可用"""
-        if self._available is not None:
-            return self._available
-        try:
-            import requests
-            url = f"{self.api_url}/models"
-            headers = {}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-            proxies = {"http": None, "https": None}
-            resp = requests.get(url, headers=headers, timeout=5, proxies=proxies)
-            self._available = resp.status_code == 200
-        except Exception:
-            self._available = False
-        return self._available
+# 从 shared 模块导入统一实现
+from pi_mode.shared import (
+    LLMClient,
+    parse_llm_json as _parse_json,
+    load_prompt as _load_prompt_file,
+    build_context_summary,
+    PROJECT_ROOT,
+)
 
 
 class CacheManager:
@@ -161,13 +87,13 @@ class CacheManager:
         """获取缓存信息"""
         if not self.cache_dir.exists():
             return {"count": 0, "size": 0, "size_human": "0 KB", "dir": str(self.cache_dir)}
-        
+
         count = 0
         total_size = 0
         for f in self.cache_dir.glob("*.json"):
             count += 1
             total_size += f.stat().st_size
-        
+
         return {
             "count": count,
             "size": total_size,
@@ -177,7 +103,19 @@ class CacheManager:
 
 
 class BaseGenerator:
-    """生成器基类（共享）"""
+    """
+    生成器基类（共享）
+
+    提供以下统一能力：
+    - LLM 客户端（self.llm）
+    - 缓存管理（self.cache）
+    - 提示词加载（_load_prompt）
+    - 分析结果加载与解包（_load_analysis 返回已解包的 analysis data）
+    - JSON 解析（_parse_llm_json）
+    - Twee 渲染（_render_twee / _render_story_data / _render_passage）
+    - 上下文摘要构建（_build_context_summary）
+    - 游戏名称推导（_derive_name）
+    """
 
     # 缓存子目录名，子类可覆盖
     CACHE_SUBDIR = "common"
@@ -185,25 +123,40 @@ class BaseGenerator:
     def __init__(self, output_dir: str = "./generated_games"):
         self.output_dir = Path(output_dir)
         self.llm: Optional[LLMClient] = None
-        self.prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-        
+        self.prompts_dir = PROJECT_ROOT / "prompts"
+
         # 初始化缓存
-        cache_dir = Path(__file__).parent.parent.parent / ".cache" / self.CACHE_SUBDIR
+        cache_dir = PROJECT_ROOT / ".cache" / self.CACHE_SUBDIR
         self.cache = CacheManager(cache_dir)
+
+    # ── 提示词 ──────────────────────────────────────────────────
 
     def _load_prompt(self, filename: str) -> str:
         """加载提示词文件"""
-        prompt_file = self.prompts_dir / filename
-        if prompt_file.exists():
-            return prompt_file.read_text(encoding="utf-8")
-        return ""
+        return _load_prompt_file(filename)
+
+    # ── 分析结果 ────────────────────────────────────────────────
 
     def _load_analysis(self, path: str) -> Dict:
-        """加载分析结果"""
+        """
+        加载分析结果 JSON 文件并返回完整内容（含 source_file 等元信息）。
+        不做解包，子类通过 _unwrap_analysis 获取内部数据。
+        """
         p = Path(path)
         if not p.exists():
             raise FileNotFoundError(f"分析文件不存在: {path}")
         return json.loads(p.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _unwrap_analysis(analysis: Dict) -> Dict:
+        """
+        解包分析结果：如果顶层有 "analysis" 键则返回其值，否则返回原 dict。
+        统一处理 analyze.py 产出的 {source_file, analysis: {...}} 和直接 {...} 两种格式。
+        """
+        data = analysis.get("analysis")
+        if isinstance(data, dict):
+            return data
+        return analysis
 
     def _derive_name(self, analysis: Dict, analysis_file: str = "", suffix: str = "") -> str:
         """从分析结果或文件名生成游戏名称"""
@@ -213,36 +166,77 @@ class BaseGenerator:
             name = "".join(c for c in stem if c.isalnum() or c in "_- ")
             if name:
                 return name + suffix
-        data = analysis.get("analysis", analysis)
+        data = self._unwrap_analysis(analysis)
         name = data.get("world", {}).get("name", "Game")
         name = "".join(c for c in name if c.isalnum() or c in "_- ")
         return (name or "Game") + suffix
 
+    # ── JSON 解析 ───────────────────────────────────────────────
+
     @staticmethod
-    def _parse_llm_json(content: str) -> Optional[Dict]:
-        """解析 LLM 返回的 JSON（带容错）"""
-        content = content.strip()
-        # 移除 markdown 代码块
-        if content.startswith("```"):
-            lines = content.split("\n", 1)
-            content = lines[1] if len(lines) > 1 else content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
+    def _parse_llm_json(content: str) -> Optional[Any]:
+        """解析 LLM 返回的 JSON（带容错），委托给 shared.parse_llm_json"""
+        return _parse_json(content)
 
-        # 直接解析
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
+    # ── 上下文摘要 ──────────────────────────────────────────────
 
-        # 提取 JSON 对象
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        if start >= 0 and end > start:
-            try:
-                return json.loads(content[start:end])
-            except json.JSONDecodeError:
-                pass
+    @staticmethod
+    def _build_context_summary(
+        event_chars: List[str],
+        characters: Dict or List,
+        conflicts: List[Dict],
+        relationships: List[Dict],
+    ) -> Tuple[str, str, str]:
+        """
+        从事件角色、角色列表、冲突、关系中构建 LLM prompt 用的上下文摘要。
+        委托给 shared.build_context_summary，消除 4 处重复构建逻辑。
+        """
+        return build_context_summary(event_chars, characters, conflicts, relationships)
 
-        return None
+    # ── Twee 渲染（共享，Twine 和 Quiz 通用）────────────────────
+
+    def _render_twee(self, story: Dict, *args, **kwargs) -> str:
+        """
+        将故事结构渲染为 Twee 格式文本。
+        story = {title, config, stylesheet, javascript, passages: [...]}
+        """
+        parts = [
+            self._render_story_data(story),
+            f":: Story stylesheet\n{story.get('stylesheet', '')}",
+            f":: Story script\n{story.get('javascript', '')}",
+        ]
+        for passage in story.get("passages", []):
+            parts.append(self._render_passage(passage))
+        return "\n\n".join(parts) + "\n"
+
+    @staticmethod
+    def _render_story_data(story: Dict) -> str:
+        """渲染 :: StoryData 段落（Twee3 JSON 格式）"""
+        title = story.get("title", "Untitled")
+        meta = {
+            "tags": "",
+            "color": "#000000",
+            "name": title,
+            "format-version": "2.0.0",
+            "format": "Chapbook",
+            "uuid": str(uuid.uuid4()),
+        }
+        return f":: StoryData\n{json.dumps(meta, ensure_ascii=False, indent=2)}"
+
+    @staticmethod
+    def _render_passage(passage: Dict) -> str:
+        """渲染单个段落"""
+        name = passage.get("name", "Untitled")
+        tags = passage.get("tags", [])
+        source = passage.get("source", "")
+
+        # 段落名需要转义（含特殊字符时加引号）
+        if any(c in name for c in '[]{}():|"'):
+            name = f'"{name}"'
+
+        tag_str = " ".join(tags)
+        header = f":: {name}"
+        if tag_str:
+            header += f" [{tag_str}]"
+
+        return f"{header}\n{source}"

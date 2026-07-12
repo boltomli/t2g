@@ -5,17 +5,19 @@ Twine/Chapbook 故事生成器
 """
 
 import json
-import os
 import re
+import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
+
+# 确保项目根目录在 sys.path 中（支持直接运行）
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 # 导入共享基础模块
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
-from base import BaseGenerator, LLMClient, CacheManager
+from pi_mode.generators.base import BaseGenerator, LLMClient
 
 
 class TwineGenerator(BaseGenerator):
@@ -46,7 +48,7 @@ class TwineGenerator(BaseGenerator):
         else:
             print(f"[Twine] LLM 不可用，使用模板生成（回退模式）")
 
-        analysis_data = analysis.get("analysis", analysis)
+        analysis_data = self._unwrap_analysis(analysis)
 
         # 构建数据
         characters = self._build_characters(analysis_data)
@@ -54,7 +56,7 @@ class TwineGenerator(BaseGenerator):
 
         # 生成 Twee 文件
         project_path.mkdir(parents=True, exist_ok=True)
-        twee_content = self._render_twee(story_data, characters, analysis_data)
+        twee_content = self._render_twee(story_data)
         twee_path = project_path / f"{game_name}.twee"
         twee_path.write_text(twee_content, encoding="utf-8")
         print(f"[Twine] OK Twee 文件: {twee_path}")
@@ -514,31 +516,11 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
         if not self.llm or not self.llm.check_available() or not self._branch_prompt:
             return None
 
-        # 构建角色信息摘要
+        # 构建上下文摘要（使用共享方法）
         event_chars = event.get("characters", [])
-        chars_info = []
-        for name in event_chars:
-            char_data = characters.get(name)
-            if char_data:
-                traits = ", ".join(char_data.get("traits", []))
-                goal = char_data.get("goal", "")
-                chars_info.append(f"- {name}（{char_data.get('role', '')}）：特征[{traits}]，目标：{goal}")
-        chars_text = "\n".join(chars_info) if chars_info else "无特定角色"
-
-        # 冲突信息
-        conflicts_text = "\n".join(
-            f"- {c.get('type', '')}：{c.get('description', '')}" for c in conflicts
-        ) if conflicts else "无明确冲突"
-
-        # 关系信息
-        relevant_rels = [
-            r for r in relationships
-            if r.get("from") in event_chars or r.get("to") in event_chars
-        ]
-        rels_text = "\n".join(
-            f"- {r.get('from', '')} -> {r.get('to', '')}（{r.get('type', '')}）：{r.get('description', '')}"
-            for r in relevant_rels
-        ) if relevant_rels else "无直接关系"
+        chars_text, conflicts_text, rels_text = self._build_context_summary(
+            event_chars, characters, conflicts, relationships
+        )
 
         prev_text = f"标题：{prev_event.get('title', '')}，描述：{prev_event.get('description', '')[:100]}" if prev_event else "无（这是第一个事件）"
         next_text = f"标题：{next_event.get('title', '')}，描述：{next_event.get('description', '')[:100]}" if next_event else "无（这是最后一个事件）"
@@ -835,68 +817,8 @@ window.t2gCharacters = {json.dumps(char_colors, ensure_ascii=False)};
         return passages
 
     # ──────────────────────── Twee 渲染 ────────────────────────
-
-    def _render_twee(self, story: Dict, characters: Dict, analysis: Dict) -> str:
-        """将故事结构渲染为 Twee 格式文本"""
-        parts = []
-
-        # ── StoryData 元数据 ──
-        parts.append(self._render_story_data(story))
-
-        # ── Story stylesheet ──
-        parts.append(self._render_story_tag("Story stylesheet", story.get("stylesheet", "")))
-
-        # ── Story script ──
-        parts.append(self._render_story_tag("Story script", story.get("javascript", "")))
-
-        # ── 各段落 ──
-        for passage in story.get("passages", []):
-            parts.append(self._render_passage(passage))
-
-        return "\n\n".join(parts) + "\n"
-
-    def _render_story_data(self, story: Dict) -> str:
-        """渲染 :: StoryData 段落（Twee3 JSON 格式）"""
-        import uuid
-        title = story.get("title", "Untitled")
-
-        meta = {
-            "tags": "",
-            "color": "#000000",
-            "name": title,
-            "format-version": "2.0.0",
-            "format": "Chapbook",
-            "uuid": self._generate_uuid(),
-        }
-
-        return f":: StoryData\n{json.dumps(meta, ensure_ascii=False, indent=2)}"
-
-    def _render_story_tag(self, tag_name: str, content: str) -> str:
-        """渲染 Story stylesheet / Story script"""
-        return f":: {tag_name}\n{content}"
-
-    def _render_passage(self, passage: Dict) -> str:
-        """渲染单个段落"""
-        name = passage.get("name", "Untitled")
-        tags = passage.get("tags", [])
-        source = passage.get("source", "")
-
-        # 段落名需要转义（含特殊字符时加引号）
-        if any(c in name for c in '[]{}():|\"'):
-            name = f'"{name}"'
-
-        tag_str = " ".join(tags)
-        header = f":: {name}"
-        if tag_str:
-            header += f" [{tag_str}]"
-
-        return f"{header}\n{source}"
-
-    @staticmethod
-    def _generate_uuid() -> str:
-        """生成简单 UUID"""
-        import uuid
-        return str(uuid.uuid4())
+    # _render_twee / _render_story_data / _render_passage 继承自 BaseGenerator，
+    # 统一了 Twine 和 Quiz 的 Twee 格式输出。
 
 
 def main():

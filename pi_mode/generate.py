@@ -10,29 +10,17 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-# 导入子生成器
-def _load_generator(module_name: str, class_name: str):
-    """动态加载生成器模块"""
-    try:
-        mod = __import__(f"generators.{module_name}", fromlist=[class_name])
-        return getattr(mod, class_name)
-    except ImportError:
-        import importlib.util
-        _spec = importlib.util.spec_from_file_location(
-            module_name,
-            Path(__file__).parent / "generators" / f"{module_name}.py"
-        )
-        if _spec and _spec.loader:
-            _mod = importlib.util.module_from_spec(_spec)
-            _spec.loader.exec_module(_mod)
-            return getattr(_mod, class_name, None)
-    return None
+# 确保项目根目录在 sys.path 中
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
-VisualNovelGenerator = _load_generator("visual_novel", "VisualNovelGenerator")
-TwineGenerator = _load_generator("twine", "TwineGenerator")
-QuizGenerator = _load_generator("quiz", "QuizGenerator")
+# 导入子生成器（统一从 pi_mode.generators 包导入）
+from pi_mode.generators import TwineGenerator, QuizGenerator
+from pi_mode.generators.visual_novel import VisualNovelGenerator
+from pi_mode.shared import compile_twee_files
 
 # 支持的游戏类型
 SUPPORTED_TYPES = ["rpg", "adventure", "visual_novel", "strategy", "action", "twine", "quiz"]
@@ -676,43 +664,7 @@ def main():
     
     # 处理缓存管理命令
     if args.cache_info or args.clear_cache:
-        # 动态导入避免循环依赖
-        import importlib.util
-        
-        # 先导入 base 模块
-        base_spec = importlib.util.spec_from_file_location(
-            "base",
-            Path(__file__).parent / "generators" / "base.py"
-        )
-        if base_spec and base_spec.loader:
-            base_mod = importlib.util.module_from_spec(base_spec)
-            base_spec.loader.exec_module(base_mod)
-            # 注册到 sys.modules 以便子模块导入
-            sys.modules["pi_mode.generators.base"] = base_mod
-            sys.modules["generators.base"] = base_mod
-        
-        _spec = importlib.util.spec_from_file_location(
-            "visual_novel",
-            Path(__file__).parent / "generators" / "visual_novel.py"
-        )
-        if _spec and _spec.loader:
-            _mod = importlib.util.module_from_spec(_spec)
-            _spec.loader.exec_module(_mod)
-            VisualNovelGenerator = _mod.VisualNovelGenerator
-        else:
-            VisualNovelGenerator = None
-        
-        _spec2 = importlib.util.spec_from_file_location(
-            "twine",
-            Path(__file__).parent / "generators" / "twine.py"
-        )
-        if _spec2 and _spec2.loader:
-            _mod2 = importlib.util.module_from_spec(_spec2)
-            _spec2.loader.exec_module(_mod2)
-            TwineGenerator = _mod2.TwineGenerator
-        else:
-            TwineGenerator = None
-        
+        # 使用已导入的生成器（无需动态加载）
         generators = []
         if VisualNovelGenerator:
             generators.append(("VN", VisualNovelGenerator(args.output)))
@@ -747,7 +699,6 @@ def main():
 
     # 生成游戏
     try:
-        compiled = False
         # Quiz 支持直接从文本生成
         if args.type == "quiz" and args.text_file and QuizGenerator is not None:
             text = Path(args.text_file).read_text(encoding="utf-8")
@@ -760,32 +711,11 @@ def main():
                 num_questions=args.questions,
             )
             # quiz from-text 自动编译
-            project_dir = Path(project_path)
-            twee_files = list(project_dir.glob("*.twee"))
-            if twee_files:
-                print(f"\n正在编译 Twee 文件...")
-                try:
-                    compile_path = Path(__file__).parent / "compile_twee.py"
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location("compile_twee", compile_path)
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        for twee_file in twee_files:
-                            html_path = twee_file.with_suffix(".html")
-                            mod.compile_twee(twee_file, html_path)
-                            print(f"[OK] 编译完成: {html_path}")
-                        compiled = True
-                    else:
-                        raise ImportError("无法加载 compile_twee 模块")
-                except Exception as e:
-                    print(f"[WARN] 自动编译失败: {e}")
-                    print(f"  手动编译: uv run python pi_mode/compile_twee.py {project_path}")
+            compile_twee_files(project_path)
         elif args.type == "quiz" and QuizGenerator is not None:
             quiz_gen = QuizGenerator(str(args.output))
             if args.no_cache:
                 quiz_gen.cache.clear_cache()
-            game_config = {"num_questions": args.questions}
             project_path = quiz_gen.generate(
                 args.analysis, output_name=args.name,
                 use_llm=not args.no_llm, num_questions=args.questions,
@@ -813,28 +743,9 @@ def main():
             else:
                 project_path = str(new_path)
         
-        # Twine/Quiz 类型自动编译为 HTML
-        if not compiled and args.type in ("twine", "quiz"):
-            project_dir = Path(project_path)
-            twee_files = list(project_dir.glob("*.twee"))
-            if twee_files:
-                print(f"\n正在编译 Twee 文件...")
-                try:
-                    compile_path = Path(__file__).parent / "compile_twee.py"
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location("compile_twee", compile_path)
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        for twee_file in twee_files:
-                            html_path = twee_file.with_suffix(".html")
-                            mod.compile_twee(twee_file, html_path)
-                            print(f"[OK] 编译完成: {html_path}")
-                    else:
-                        raise ImportError("无法加载 compile_twee 模块")
-                except Exception as e:
-                    print(f"[WARN] 自动编译失败: {e}")
-                    print(f"  手动编译: uv run python pi_mode/compile_twee.py {project_path}")
+        # Twine/Quiz 类型自动编译为 HTML（使用共享编译函数）
+        if args.type in ("twine", "quiz"):
+            compile_twee_files(project_path)
     
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)
